@@ -2,6 +2,7 @@
 
 import type { FacilityType, StructureType, RoomType } from "@/types/floorplan";
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
+import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar from "@/components/panels/StructureToolbar";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
@@ -13,8 +14,11 @@ type LeftPanelProps = {
   onAddStructure: (type: StructureType, roomType?: RoomType) => void;
   extinguisherTypeId: string;
   onExtinguisherTypeChange: (id: string) => void;
+  extinguisherAbilityUnitsInput: string;
+  onExtinguisherAbilityUnitsChange: (value: string) => void;
+  extinguisherError: string | null;
   onAutoPlaceExtinguishers: () => void;
-  extinguisherSummary: { totalArea: number; requiredCount: number } | null;
+  extinguisherSummary: ExtinguisherSummary | null;
   heatDetectorCoverageAreaInput: string;
   onHeatDetectorCoverageAreaChange: (value: string) => void;
   heatDetectorError: string | null;
@@ -28,6 +32,9 @@ export default function LeftPanel({
   onAddStructure,
   extinguisherTypeId,
   onExtinguisherTypeChange,
+  extinguisherAbilityUnitsInput,
+  onExtinguisherAbilityUnitsChange,
+  extinguisherError,
   onAutoPlaceExtinguishers,
   extinguisherSummary,
   heatDetectorCoverageAreaInput,
@@ -41,8 +48,12 @@ export default function LeftPanel({
       <FacilityTypeSelect value={facilityType} onChange={onFacilityTypeChange} />
       <StructureToolbar onAdd={onAddStructure} />
       <ExtinguisherPanel
+        facilityType={facilityType}
         typeId={extinguisherTypeId}
         onTypeChange={onExtinguisherTypeChange}
+        abilityUnitsInput={extinguisherAbilityUnitsInput}
+        onAbilityUnitsChange={onExtinguisherAbilityUnitsChange}
+        error={extinguisherError}
         onAutoPlace={onAutoPlaceExtinguishers}
         summary={extinguisherSummary}
       />

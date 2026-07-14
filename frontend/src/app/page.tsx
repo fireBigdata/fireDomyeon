@@ -46,10 +46,14 @@ export default function Home() {
   const {
     typeId: extinguisherTypeId,
     setTypeId: setExtinguisherTypeId,
+    abilityUnitsInput: extinguisherAbilityUnitsInput,
+    setAbilityUnitsInput: setExtinguisherAbilityUnitsInput,
+    error: extinguisherError,
     summary: extinguisherSummary,
     autoPlace: autoPlaceExtinguishers,
   } = useExtinguisherPlacement(
-    currentFloor.structures,
+    currentFloor,
+    state.facilityType,
     state.scale,
     setExtinguisherPlacements
   );
@@ -88,6 +92,9 @@ export default function Home() {
           onAddStructure={addStructure}
           extinguisherTypeId={extinguisherTypeId}
           onExtinguisherTypeChange={setExtinguisherTypeId}
+          extinguisherAbilityUnitsInput={extinguisherAbilityUnitsInput}
+          onExtinguisherAbilityUnitsChange={setExtinguisherAbilityUnitsInput}
+          extinguisherError={extinguisherError}
           onAutoPlaceExtinguishers={autoPlaceExtinguishers}
           extinguisherSummary={extinguisherSummary}
           heatDetectorCoverageAreaInput={heatDetectorCoverageAreaInput}

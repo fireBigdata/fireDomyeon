@@ -14,6 +14,11 @@ export function pixelLengthToMeters(pixelLength: number, scale: number): number 
   return (pixelLength / PIXELS_PER_METER) * Math.sqrt(scale);
 }
 
+/** Inverse of pixelLengthToMeters: converts a real-world length in meters into pixels. */
+export function metersToPixelLength(meters: number, scale: number): number {
+  return (meters * PIXELS_PER_METER) / Math.sqrt(scale || 1);
+}
+
 export function toPyeong(squareMeters: number): number {
   return squareMeters / SQUARE_METERS_PER_PYEONG;
 }

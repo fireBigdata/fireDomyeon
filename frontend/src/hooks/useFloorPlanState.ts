@@ -127,7 +127,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
                   (detector) => detector.roomId !== id
                 ),
                 extinguisherPlacements: f.extinguisherPlacements.filter(
-                  (placement) => placement.roomId !== id
+                  (placement) => placement.structureId !== id
                 ),
               }
         ),
@@ -360,7 +360,12 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     (placements: ExtinguisherPlacement[]) => {
       updateCurrentFloor((floor) => ({
         ...floor,
-        extinguisherPlacements: placements,
+        // Re-placing replaces only the previous auto-placed batch; any
+        // manually placed extinguishers (isAutoPlaced === false) are kept.
+        extinguisherPlacements: [
+          ...floor.extinguisherPlacements.filter((placement) => !placement.isAutoPlaced),
+          ...placements,
+        ],
       }));
     },
     [updateCurrentFloor]

@@ -54,8 +54,10 @@ class ExtinguisherPlacement(BaseModel):
     x: float
     y: float
     extinguisher_type_id: str = Field(alias="extinguisherTypeId")
-    # Room this placement was auto-placed into; used to cascade-delete on room removal.
-    room_id: Optional[str] = Field(default=None, alias="roomId")
+    # Room or corridor this placement belongs to; used to cascade-delete when
+    # that structure is removed.
+    structure_id: Optional[str] = Field(default=None, alias="structureId")
+    is_auto_placed: bool = Field(default=True, alias="isAutoPlaced")
 
     model_config = {"populate_by_name": True}
 
