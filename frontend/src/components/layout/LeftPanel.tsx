@@ -1,9 +1,11 @@
 "use client";
 
 import type { FacilityType, StructureType, RoomType } from "@/types/floorplan";
+import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar from "@/components/panels/StructureToolbar";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
+import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 
 type LeftPanelProps = {
   facilityType: FacilityType;
@@ -13,6 +15,11 @@ type LeftPanelProps = {
   onExtinguisherTypeChange: (id: string) => void;
   onAutoPlaceExtinguishers: () => void;
   extinguisherSummary: { totalArea: number; requiredCount: number } | null;
+  heatDetectorCoverageAreaInput: string;
+  onHeatDetectorCoverageAreaChange: (value: string) => void;
+  heatDetectorError: string | null;
+  onAutoPlaceHeatDetectors: () => void;
+  heatDetectorSummary: HeatDetectorSummary | null;
 };
 
 export default function LeftPanel({
@@ -23,9 +30,14 @@ export default function LeftPanel({
   onExtinguisherTypeChange,
   onAutoPlaceExtinguishers,
   extinguisherSummary,
+  heatDetectorCoverageAreaInput,
+  onHeatDetectorCoverageAreaChange,
+  heatDetectorError,
+  onAutoPlaceHeatDetectors,
+  heatDetectorSummary,
 }: LeftPanelProps) {
   return (
-    <aside className="flex w-56 flex-col gap-6 border-r border-gray-200 bg-white p-4">
+    <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
       <FacilityTypeSelect value={facilityType} onChange={onFacilityTypeChange} />
       <StructureToolbar onAdd={onAddStructure} />
       <ExtinguisherPanel
@@ -33,6 +45,13 @@ export default function LeftPanel({
         onTypeChange={onExtinguisherTypeChange}
         onAutoPlace={onAutoPlaceExtinguishers}
         summary={extinguisherSummary}
+      />
+      <HeatDetectorPanel
+        coverageAreaInput={heatDetectorCoverageAreaInput}
+        onCoverageAreaChange={onHeatDetectorCoverageAreaChange}
+        error={heatDetectorError}
+        onAutoPlace={onAutoPlaceHeatDetectors}
+        summary={heatDetectorSummary}
       />
     </aside>
   );

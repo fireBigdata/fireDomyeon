@@ -4,7 +4,7 @@ import type { PartitionDirection, RoomType, Structure } from "@/types/floorplan"
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
 import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
-import { ROOT_LEAF_ID, findPartitionNode } from "@/lib/partitionTree";
+import { ROOT_LEAF_ID, computeEffectivePixelArea, findPartitionNode } from "@/lib/partitionTree";
 import { formatArea, pixelAreaToSquareMeters } from "@/lib/area";
 
 type StructureInfoPanelProps = {
@@ -53,7 +53,7 @@ export default function StructureInfoPanel({
     );
   }
 
-  const area = pixelAreaToSquareMeters(structure.width * structure.height, scale);
+  const area = pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);
   const isRoom = structure.type === "room";
   const targetLeafId = selectedPartitionId ?? ROOT_LEAF_ID;
   const selectedNode = selectedPartitionId

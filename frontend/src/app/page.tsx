@@ -3,6 +3,7 @@
 import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
+import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
 import TopBar from "@/components/layout/TopBar";
 import FloorBar from "@/components/layout/FloorBar";
 import LeftPanel from "@/components/layout/LeftPanel";
@@ -35,6 +36,8 @@ export default function Home() {
     renameFloor,
     selectFloor,
     setExtinguisherPlacements,
+    selectHeatDetector,
+    setHeatDetectors,
   } = useFloorPlanState();
 
   const saveFloorPlan = useSaveFloorPlan();
@@ -49,6 +52,14 @@ export default function Home() {
     state.scale,
     setExtinguisherPlacements
   );
+
+  const {
+    coverageAreaInput: heatDetectorCoverageAreaInput,
+    setCoverageAreaInput: setHeatDetectorCoverageAreaInput,
+    error: heatDetectorError,
+    summary: heatDetectorSummary,
+    autoPlace: autoPlaceHeatDetectors,
+  } = useHeatDetectorPlacement(currentFloor, state.scale, setHeatDetectors);
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-gray-50">
@@ -78,6 +89,11 @@ export default function Home() {
           onExtinguisherTypeChange={setExtinguisherTypeId}
           onAutoPlaceExtinguishers={autoPlaceExtinguishers}
           extinguisherSummary={extinguisherSummary}
+          heatDetectorCoverageAreaInput={heatDetectorCoverageAreaInput}
+          onHeatDetectorCoverageAreaChange={setHeatDetectorCoverageAreaInput}
+          heatDetectorError={heatDetectorError}
+          onAutoPlaceHeatDetectors={autoPlaceHeatDetectors}
+          heatDetectorSummary={heatDetectorSummary}
         />
 
         <main className="flex flex-1 flex-col items-center gap-4 overflow-auto p-6">
@@ -90,9 +106,12 @@ export default function Home() {
             selectedStructureId={state.selectedStructureId}
             selectedPartitionId={state.selectedPartitionId}
             extinguisherPlacements={currentFloor.extinguisherPlacements}
+            heatDetectors={currentFloor.heatDetectors}
+            selectedHeatDetectorId={state.selectedHeatDetectorId}
             onSelect={selectStructure}
             onSelectPartition={selectPartition}
             onResizePartition={resizePartition}
+            onSelectHeatDetector={selectHeatDetector}
             onChange={updateStructure}
           />
         </main>

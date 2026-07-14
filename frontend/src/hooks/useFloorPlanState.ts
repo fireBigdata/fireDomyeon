@@ -6,6 +6,7 @@ import type {
   FacilityType,
   Floor,
   FloorPlanState,
+  HeatDetector,
   PartitionDirection,
   RoomType,
   Structure,
@@ -16,6 +17,7 @@ import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
 import { pixelAreaToSquareMeters } from "@/lib/area";
 import {
   ROOT_LEAF_ID,
+  computeEffectivePixelArea,
   deleteRegionAt,
   mergePartitionAt,
   restoreRegionAt,
@@ -32,6 +34,7 @@ function createInitialState(): FloorPlanState {
     currentFloorId: floor.id,
     selectedStructureId: null,
     selectedPartitionId: null,
+    selectedHeatDetectorId: null,
     scale: 1,
   };
 }
@@ -118,6 +121,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       ...prev,
       selectedStructureId: id,
       selectedPartitionId: null,
+      selectedHeatDetectorId: null,
     }));
   }, []);
 
@@ -257,6 +261,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         currentFloorId: floor.id,
         selectedStructureId: null,
         selectedPartitionId: null,
+        selectedHeatDetectorId: null,
       };
     });
   }, []);
@@ -272,6 +277,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         currentFloorId: cloned.id,
         selectedStructureId: null,
         selectedPartitionId: null,
+        selectedHeatDetectorId: null,
       };
     });
   }, []);
@@ -288,6 +294,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         currentFloorId,
         selectedStructureId: null,
         selectedPartitionId: null,
+        selectedHeatDetectorId: null,
       };
     });
   }, []);
@@ -305,6 +312,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       currentFloorId: floorId,
       selectedStructureId: null,
       selectedPartitionId: null,
+      selectedHeatDetectorId: null,
     }));
   }, []);
 
@@ -314,6 +322,28 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         ...floor,
         extinguisherPlacements: placements,
       }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const selectHeatDetector = useCallback((id: string | null) => {
+    setState((prev) => ({ ...prev, selectedHeatDetectorId: id }));
+  }, []);
+
+  const setHeatDetectors = useCallback(
+    (detectors: HeatDetector[]) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        // Re-placing replaces only the previous auto-placed batch; any
+        // manually placed detectors (isAutoPlaced === false) are kept.
+        // There's no manual-placement UI yet, so today this always clears
+        // everything, but the data already supports it going forward.
+        heatDetectors: [
+          ...floor.heatDetectors.filter((detector) => !detector.isAutoPlaced),
+          ...detectors,
+        ],
+      }));
+      setState((prev) => ({ ...prev, selectedHeatDetectorId: null }));
     },
     [updateCurrentFloor]
   );
@@ -334,7 +364,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     () =>
       pixelAreaToSquareMeters(
         currentFloor.structures.reduce(
-          (sum, structure) => sum + structure.width * structure.height,
+          (sum, structure) => sum + computeEffectivePixelArea(structure),
           0
         ),
         state.scale
@@ -366,6 +396,8 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     renameFloor,
     selectFloor,
     setExtinguisherPlacements,
+    selectHeatDetector,
+    setHeatDetectors,
     loadFloorPlanState,
     ROOT_LEAF_ID,
   };

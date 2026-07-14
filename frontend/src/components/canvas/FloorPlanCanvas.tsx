@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
-import type { ExtinguisherPlacement, Structure } from "@/types/floorplan";
+import type { ExtinguisherPlacement, HeatDetector, Structure } from "@/types/floorplan";
 import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
+import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 import StructureShape from "./StructureShape";
+import HeatDetectorShape from "./HeatDetectorShape";
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 600;
@@ -15,9 +17,12 @@ type FloorPlanCanvasProps = {
   selectedStructureId: string | null;
   selectedPartitionId: string | null;
   extinguisherPlacements: ExtinguisherPlacement[];
+  heatDetectors: HeatDetector[];
+  selectedHeatDetectorId: string | null;
   onSelect: (id: string | null) => void;
   onSelectPartition: (structureId: string, leafId: string) => void;
   onResizePartition: (structureId: string, splitId: string, ratio: number) => void;
+  onSelectHeatDetector: (id: string | null) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
 };
 
@@ -26,9 +31,12 @@ export default function FloorPlanCanvas({
   selectedStructureId,
   selectedPartitionId,
   extinguisherPlacements,
+  heatDetectors,
+  selectedHeatDetectorId,
   onSelect,
   onSelectPartition,
   onResizePartition,
+  onSelectHeatDetector,
   onChange,
 }: FloorPlanCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -66,6 +74,7 @@ export default function FloorPlanCanvas({
       onMouseDown={(e) => {
         if (e.target === e.target.getStage()) {
           onSelect(null);
+          onSelectHeatDetector(null);
         }
       }}
     >
@@ -107,6 +116,20 @@ export default function FloorPlanCanvas({
             />
           </Group>
         ))}
+        {heatDetectors.map((detector) => {
+          const room = structures.find((s) => s.id === detector.roomId);
+          const roomLabel =
+            ROOM_TYPE_DEFAULTS[room?.roomType ?? DEFAULT_ROOM_TYPE].label;
+          return (
+            <HeatDetectorShape
+              key={detector.id}
+              detector={detector}
+              roomLabel={roomLabel}
+              isSelected={detector.id === selectedHeatDetectorId}
+              onToggleSelect={onSelectHeatDetector}
+            />
+          );
+        })}
         <Transformer
           ref={transformerRef}
           rotateEnabled={false}

@@ -1,7 +1,8 @@
-import type { PartitionDirection, PartitionNode } from "@/types/floorplan";
+import type { PartitionDirection, PartitionNode, Structure } from "@/types/floorplan";
 import { createId } from "@/lib/id";
 
 export type Box = { x: number; y: number; width: number; height: number };
+export type LeafBox = { id: string; kind: "leaf" | "empty"; box: Box };
 
 // Used as the leaf id for a room that has no partitions yet (a single,
 // implicit space covering the whole room).
@@ -23,6 +24,58 @@ export function findPartitionNode(
     findPartitionNode(node.children[0], id) ??
     findPartitionNode(node.children[1], id)
   );
+}
+
+/** Flattens a partition tree into the rectangles it actually occupies, in room-local coordinates. */
+export function computeLeafBoxes(
+  node: PartitionNode | undefined,
+  box: Box
+): LeafBox[] {
+  if (!node) {
+    return [{ id: ROOT_LEAF_ID, kind: "leaf", box }];
+  }
+
+  if (node.kind !== "split") {
+    return [{ id: node.id, kind: node.kind, box }];
+  }
+
+  const { direction, ratio, children } = node;
+
+  if (direction === "vertical") {
+    const firstWidth = box.width * ratio;
+    const firstBox = { ...box, width: firstWidth };
+    const secondBox = {
+      ...box,
+      x: box.x + firstWidth,
+      width: box.width - firstWidth,
+    };
+    return [
+      ...computeLeafBoxes(children[0], firstBox),
+      ...computeLeafBoxes(children[1], secondBox),
+    ];
+  }
+
+  const firstHeight = box.height * ratio;
+  const firstBox = { ...box, height: firstHeight };
+  const secondBox = {
+    ...box,
+    y: box.y + firstHeight,
+    height: box.height - firstHeight,
+  };
+  return [
+    ...computeLeafBoxes(children[0], firstBox),
+    ...computeLeafBoxes(children[1], secondBox),
+  ];
+}
+
+/** A structure's pixel area minus any deleted (empty) partition regions. */
+export function computeEffectivePixelArea(structure: Structure): number {
+  if (!structure.partitions) return structure.width * structure.height;
+
+  const roomBox: Box = { x: 0, y: 0, width: structure.width, height: structure.height };
+  return computeLeafBoxes(structure.partitions, roomBox)
+    .filter((leaf) => leaf.kind !== "empty")
+    .reduce((sum, leaf) => sum + leaf.box.width * leaf.box.height, 0);
 }
 
 export type SplitResult = {

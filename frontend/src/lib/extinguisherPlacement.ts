@@ -2,6 +2,7 @@ import type { Structure } from "@/types/floorplan";
 import type { ExtinguisherPlacement, ExtinguisherTypeDef } from "@/types/extinguisher";
 import { createId } from "@/lib/id";
 import { pixelAreaToSquareMeters } from "@/lib/area";
+import { computeEffectivePixelArea } from "@/lib/partitionTree";
 
 export type AutoPlaceResult = {
   totalArea: number;
@@ -17,7 +18,7 @@ export function computeTotalRoomArea(
   return pixelAreaToSquareMeters(
     structures
       .filter((structure) => structure.type === "room")
-      .reduce((sum, room) => sum + room.width * room.height, 0),
+      .reduce((sum, room) => sum + computeEffectivePixelArea(room), 0),
     scale
   );
 }

@@ -58,12 +58,29 @@ class ExtinguisherPlacement(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class HeatDetector(BaseModel):
+    id: str
+    floor_id: str = Field(alias="floorId")
+    room_id: str = Field(alias="roomId")
+    # Set when placed inside a specific partition leaf rather than the whole room.
+    partition_id: Optional[str] = Field(default=None, alias="partitionId")
+    x: float
+    y: float
+    coverage_area: float = Field(alias="coverageArea")
+    is_auto_placed: bool = Field(alias="isAutoPlaced")
+
+    model_config = {"populate_by_name": True}
+
+
 class Floor(BaseModel):
     id: str
     name: str
     structures: list[Structure] = Field(default_factory=list)
     extinguisher_placements: list[ExtinguisherPlacement] = Field(
         default_factory=list, alias="extinguisherPlacements"
+    )
+    heat_detectors: list[HeatDetector] = Field(
+        default_factory=list, alias="heatDetectors"
     )
 
     model_config = {"populate_by_name": True}
@@ -80,6 +97,9 @@ class FloorPlanState(BaseModel):
     )
     selected_partition_id: Optional[str] = Field(
         default=None, alias="selectedPartitionId"
+    )
+    selected_heat_detector_id: Optional[str] = Field(
+        default=None, alias="selectedHeatDetectorId"
     )
     scale: float = 1
 
