@@ -21,6 +21,7 @@ export default function Home() {
     setFacilityType,
     addStructure,
     updateStructure,
+    removeStructure,
     setRoomType,
     selectStructure,
     selectPartition,
@@ -103,6 +104,7 @@ export default function Home() {
           />
           <DynamicFloorPlanCanvas
             structures={currentFloor.structures}
+            scale={state.scale}
             selectedStructureId={state.selectedStructureId}
             selectedPartitionId={state.selectedPartitionId}
             extinguisherPlacements={currentFloor.extinguisherPlacements}
@@ -127,6 +129,7 @@ export default function Home() {
           onMergePartition={mergePartition}
           onDeletePartitionRegion={deletePartitionRegion}
           onRestorePartitionRegion={restorePartitionRegion}
+          onDeleteStructure={removeStructure}
         />
       </div>
     </div>

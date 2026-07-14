@@ -57,6 +57,7 @@ export function computePlacements(
       x: room.x + room.width / 2 + offset,
       y: room.y + room.height / 2 + offset,
       extinguisherTypeId,
+      roomId: room.id,
     });
   }
 

@@ -104,6 +104,46 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     [updateCurrentFloor]
   );
 
+  const removeStructure = useCallback((id: string) => {
+    setState((prev) => {
+      const floor = prev.floors.find((f) => f.id === prev.currentFloorId);
+      if (!floor) return prev;
+
+      const removedDetectorIds = new Set(
+        floor.heatDetectors
+          .filter((detector) => detector.roomId === id)
+          .map((detector) => detector.id)
+      );
+
+      return {
+        ...prev,
+        floors: prev.floors.map((f) =>
+          f.id !== prev.currentFloorId
+            ? f
+            : {
+                ...f,
+                structures: f.structures.filter((s) => s.id !== id),
+                heatDetectors: f.heatDetectors.filter(
+                  (detector) => detector.roomId !== id
+                ),
+                extinguisherPlacements: f.extinguisherPlacements.filter(
+                  (placement) => placement.roomId !== id
+                ),
+              }
+        ),
+        selectedStructureId:
+          prev.selectedStructureId === id ? null : prev.selectedStructureId,
+        selectedPartitionId:
+          prev.selectedStructureId === id ? null : prev.selectedPartitionId,
+        selectedHeatDetectorId:
+          prev.selectedHeatDetectorId &&
+          removedDetectorIds.has(prev.selectedHeatDetectorId)
+            ? null
+            : prev.selectedHeatDetectorId,
+      };
+    });
+  }, []);
+
   const setRoomType = useCallback(
     (id: string, roomType: RoomType) => {
       updateCurrentFloor((floor) => ({
@@ -381,6 +421,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setFacilityType,
     addStructure,
     updateStructure,
+    removeStructure,
     setRoomType,
     selectStructure,
     selectPartition,

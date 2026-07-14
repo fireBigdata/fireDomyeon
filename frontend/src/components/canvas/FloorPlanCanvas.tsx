@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
 import type { ExtinguisherPlacement, HeatDetector, Structure } from "@/types/floorplan";
@@ -11,9 +11,21 @@ import HeatDetectorShape from "./HeatDetectorShape";
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 600;
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 1.15;
+
+type ViewTransform = { scale: number; x: number; y: number };
+
+const INITIAL_VIEW: ViewTransform = { scale: 1, x: 0, y: 0 };
+
+function clampZoom(value: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
 
 type FloorPlanCanvasProps = {
   structures: Structure[];
+  scale: number;
   selectedStructureId: string | null;
   selectedPartitionId: string | null;
   extinguisherPlacements: ExtinguisherPlacement[];
@@ -28,6 +40,7 @@ type FloorPlanCanvasProps = {
 
 export default function FloorPlanCanvas({
   structures,
+  scale,
   selectedStructureId,
   selectedPartitionId,
   extinguisherPlacements,
@@ -40,7 +53,9 @@ export default function FloorPlanCanvas({
   onChange,
 }: FloorPlanCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
+  const stageRef = useRef<Konva.Stage>(null);
   const nodesRef = useRef<Map<string, Konva.Group>>(new Map());
+  const [view, setView] = useState<ViewTransform>(INITIAL_VIEW);
 
   const registerNode = useCallback((id: string, node: Konva.Group | null) => {
     if (node) {
@@ -48,6 +63,53 @@ export default function FloorPlanCanvas({
     } else {
       nodesRef.current.delete(id);
     }
+  }, []);
+
+  // Zooms so the content under `point` (in stage/screen coordinates) stays
+  // fixed on screen, instead of zooming toward the canvas origin.
+  const zoomAtPoint = useCallback((point: { x: number; y: number }, direction: 1 | -1) => {
+    setView((prev) => {
+      const nextScale = clampZoom(
+        direction > 0 ? prev.scale * ZOOM_STEP : prev.scale / ZOOM_STEP
+      );
+      const contentPoint = {
+        x: (point.x - prev.x) / prev.scale,
+        y: (point.y - prev.y) / prev.scale,
+      };
+      return {
+        scale: nextScale,
+        x: point.x - contentPoint.x * nextScale,
+        y: point.y - contentPoint.y * nextScale,
+      };
+    });
+  }, []);
+
+  const handleWheel = useCallback(
+    (e: Konva.KonvaEventObject<WheelEvent>) => {
+      e.evt.preventDefault();
+      const pointer = stageRef.current?.getPointerPosition();
+      if (!pointer) return;
+      zoomAtPoint(pointer, e.evt.deltaY > 0 ? -1 : 1);
+    },
+    [zoomAtPoint]
+  );
+
+  const handleZoomButton = useCallback(
+    (direction: 1 | -1) => {
+      zoomAtPoint({ x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 }, direction);
+    },
+    [zoomAtPoint]
+  );
+
+  const handleResetView = useCallback(() => {
+    setView(INITIAL_VIEW);
+  }, []);
+
+  const handleStageDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    // Konva drag events bubble: dragging a room (its own draggable Group)
+    // would otherwise be mistaken here for panning the stage.
+    if (e.target !== e.target.getStage()) return;
+    setView((prev) => ({ ...prev, x: e.target.x(), y: e.target.y() }));
   }, []);
 
   useEffect(() => {
@@ -67,39 +129,75 @@ export default function FloorPlanCanvas({
   }, [selectedStructureId, structures]);
 
   return (
-    <Stage
-      width={CANVAS_WIDTH}
-      height={CANVAS_HEIGHT}
-      className="rounded-md border border-gray-300 bg-white shadow-sm"
-      onMouseDown={(e) => {
-        if (e.target === e.target.getStage()) {
-          onSelect(null);
-          onSelectHeatDetector(null);
-        }
-      }}
-    >
-      <Layer>
-        <Rect
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-          fill={CANVAS_BACKGROUND_COLOR}
-          listening={false}
-        />
-        {structures.map((structure) => (
-          <StructureShape
-            key={structure.id}
-            structure={structure}
-            isSelected={structure.id === selectedStructureId}
-            selectedPartitionId={
-              structure.id === selectedStructureId ? selectedPartitionId : null
-            }
-            onSelect={onSelect}
-            onSelectPartition={onSelectPartition}
-            onResizePartition={onResizePartition}
-            onChange={onChange}
-            registerNode={registerNode}
+    <div className="relative">
+      <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-md border border-gray-300 bg-white p-1 shadow-sm">
+        <button
+          type="button"
+          onClick={() => handleZoomButton(1)}
+          aria-label="확대"
+          className="flex h-7 w-7 items-center justify-center rounded text-sm font-semibold text-gray-700 hover:bg-gray-100"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => handleZoomButton(-1)}
+          aria-label="축소"
+          className="flex h-7 w-7 items-center justify-center rounded text-sm font-semibold text-gray-700 hover:bg-gray-100"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          onClick={handleResetView}
+          aria-label="확대/축소 초기화"
+          className="flex h-7 w-7 items-center justify-center rounded text-[10px] font-medium text-gray-500 hover:bg-gray-100"
+        >
+          {Math.round(view.scale * 100)}%
+        </button>
+      </div>
+      <Stage
+        ref={stageRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        scaleX={view.scale}
+        scaleY={view.scale}
+        x={view.x}
+        y={view.y}
+        draggable
+        onWheel={handleWheel}
+        onDragEnd={handleStageDragEnd}
+        className="rounded-md border border-gray-300 bg-white shadow-sm"
+        onMouseDown={(e) => {
+          if (e.target === e.target.getStage()) {
+            onSelect(null);
+            onSelectHeatDetector(null);
+          }
+        }}
+      >
+        <Layer>
+          <Rect
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            fill={CANVAS_BACKGROUND_COLOR}
+            listening={false}
           />
-        ))}
+          {structures.map((structure) => (
+            <StructureShape
+              key={structure.id}
+              structure={structure}
+              scale={scale}
+              isSelected={structure.id === selectedStructureId}
+              selectedPartitionId={
+                structure.id === selectedStructureId ? selectedPartitionId : null
+              }
+              onSelect={onSelect}
+              onSelectPartition={onSelectPartition}
+              onResizePartition={onResizePartition}
+              onChange={onChange}
+              registerNode={registerNode}
+            />
+          ))}
         {extinguisherPlacements.map((placement) => (
           <Group key={placement.id} x={placement.x} y={placement.y} listening={false}>
             <Circle radius={10} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />
@@ -140,7 +238,8 @@ export default function FloorPlanCanvas({
             return newBox;
           }}
         />
-      </Layer>
-    </Stage>
+        </Layer>
+      </Stage>
+    </div>
   );
 }

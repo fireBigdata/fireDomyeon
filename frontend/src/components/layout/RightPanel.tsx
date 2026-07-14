@@ -18,6 +18,7 @@ type RightPanelProps = {
   onMergePartition: (structureId: string, leafId: string) => void;
   onDeletePartitionRegion: (structureId: string, leafId: string) => void;
   onRestorePartitionRegion: (structureId: string, emptyId: string) => void;
+  onDeleteStructure: (id: string) => void;
 };
 
 export default function RightPanel({
@@ -31,6 +32,7 @@ export default function RightPanel({
   onMergePartition,
   onDeletePartitionRegion,
   onRestorePartitionRegion,
+  onDeleteStructure,
 }: RightPanelProps) {
   return (
     <aside className="w-64 border-l border-gray-200 bg-white p-4">
@@ -46,6 +48,7 @@ export default function RightPanel({
         onMergePartition={onMergePartition}
         onDeletePartitionRegion={onDeletePartitionRegion}
         onRestorePartitionRegion={onRestorePartitionRegion}
+        onDeleteStructure={onDeleteStructure}
       />
     </aside>
   );

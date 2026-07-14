@@ -22,6 +22,7 @@ type StructureInfoPanelProps = {
   onMergePartition: (structureId: string, leafId: string) => void;
   onDeletePartitionRegion: (structureId: string, leafId: string) => void;
   onRestorePartitionRegion: (structureId: string, emptyId: string) => void;
+  onDeleteStructure: (id: string) => void;
 };
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -44,6 +45,7 @@ export default function StructureInfoPanel({
   onMergePartition,
   onDeletePartitionRegion,
   onRestorePartitionRegion,
+  onDeleteStructure,
 }: StructureInfoPanelProps) {
   if (!structure) {
     return (
@@ -195,6 +197,22 @@ export default function StructureInfoPanel({
           </div>
         </>
       )}
+
+      <button
+        type="button"
+        onClick={() => {
+          if (
+            window.confirm(
+              "이 구조물을 삭제하시겠습니까? 연결된 구획, 감지기, 소화기도 함께 삭제됩니다."
+            )
+          ) {
+            onDeleteStructure(structure.id);
+          }
+        }}
+        className="mt-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+      >
+        구조물 삭제
+      </button>
     </div>
   );
 }

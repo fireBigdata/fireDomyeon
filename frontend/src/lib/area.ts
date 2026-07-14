@@ -9,6 +9,11 @@ export function pixelAreaToSquareMeters(pixelArea: number, scale: number): numbe
   return (pixelArea / (PIXELS_PER_METER * PIXELS_PER_METER)) * scale;
 }
 
+/** Converts a raw pixel length into meters, consistent with pixelAreaToSquareMeters (width * height). */
+export function pixelLengthToMeters(pixelLength: number, scale: number): number {
+  return (pixelLength / PIXELS_PER_METER) * Math.sqrt(scale);
+}
+
 export function toPyeong(squareMeters: number): number {
   return squareMeters / SQUARE_METERS_PER_PYEONG;
 }

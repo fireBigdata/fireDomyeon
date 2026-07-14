@@ -6,10 +6,13 @@ import type Konva from "konva";
 import type { Structure } from "@/types/floorplan";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { ROOM_TYPE_DEFAULTS, DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
+import { computeEffectivePixelArea } from "@/lib/partitionTree";
+import { pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
 import PartitionShape from "./PartitionShape";
 
 type StructureShapeProps = {
   structure: Structure;
+  scale: number;
   isSelected: boolean;
   selectedPartitionId: string | null;
   onSelect: (id: string) => void;
@@ -42,6 +45,7 @@ function StairsLines({ width, height }: { width: number; height: number }) {
 
 export default function StructureShape({
   structure,
+  scale,
   isSelected,
   selectedPartitionId,
   onSelect,
@@ -56,6 +60,16 @@ export default function StructureShape({
   const roomAppearance = isRoom
     ? ROOM_TYPE_DEFAULTS[structure.roomType ?? DEFAULT_ROOM_TYPE]
     : null;
+  const typeLabel = roomAppearance?.label ?? defaults.label;
+  const widthM = pixelLengthToMeters(structure.width, scale);
+  const heightM = pixelLengthToMeters(structure.height, scale);
+  const areaM2 = pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);
+
+  const tooltipLines = [
+    "구조물 정보",
+    `종류: ${typeLabel}`,
+    `면적: ${areaM2.toFixed(1)}m²`,
+  ];
 
   useEffect(() => {
     registerNode(structure.id, groupRef.current);
@@ -114,7 +128,7 @@ export default function StructureShape({
         />
       )}
       <Text
-        text={roomAppearance?.label ?? defaults.label}
+        text={typeLabel}
         width={structure.width}
         height={structure.height}
         align="center"
@@ -123,6 +137,33 @@ export default function StructureShape({
         fill="#111827"
         listening={false}
       />
+      <Text
+        text={`가로: ${widthM.toFixed(1)}m  세로: ${heightM.toFixed(1)}m`}
+        x={0}
+        y={structure.height + 4}
+        width={structure.width}
+        align="center"
+        fontSize={10}
+        fill="#374151"
+        listening={false}
+      />
+      {isSelected && (
+        // Anchored below-right of the room's top-left corner (rather than
+        // above), mirroring HeatDetectorShape's tooltip so an upward
+        // tooltip doesn't get clipped by the stage's top edge.
+        <Group x={12} y={12} listening={false}>
+          <Rect width={150} height={68} fill="#111827" opacity={0.92} cornerRadius={4} />
+          <Text
+            text={tooltipLines.join("\n")}
+            width={150}
+            height={68}
+            padding={8}
+            fontSize={11}
+            lineHeight={1.5}
+            fill="#ffffff"
+          />
+        </Group>
+      )}
     </Group>
   );
 }
