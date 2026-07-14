@@ -16,9 +16,9 @@ import type {
 import { createStructure } from "@/lib/structureFactory";
 import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
 import { pixelAreaToSquareMeters } from "@/lib/area";
+import { computeTotalStructurePixelArea } from "@/lib/structureArea";
 import {
   ROOT_LEAF_ID,
-  computeEffectivePixelArea,
   deleteRegionAt,
   mergePartitionAt,
   restoreRegionAt,
@@ -426,10 +426,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
   const totalArea = useMemo(
     () =>
       pixelAreaToSquareMeters(
-        currentFloor.structures.reduce(
-          (sum, structure) => sum + computeEffectivePixelArea(structure),
-          0
-        ),
+        computeTotalStructurePixelArea(currentFloor.structures),
         state.scale
       ),
     [currentFloor.structures, state.scale]

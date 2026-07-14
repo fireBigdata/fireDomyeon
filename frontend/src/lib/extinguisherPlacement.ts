@@ -4,7 +4,8 @@ import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { Point } from "@/lib/heatDetectorPlacement";
 import { createId } from "@/lib/id";
 import { metersToPixelLength, pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
-import { computeEffectivePixelArea, computeLeafBoxes, type Box } from "@/lib/partitionTree";
+import { computeLeafBoxes, type Box } from "@/lib/partitionTree";
+import { computeTotalStructurePixelArea } from "@/lib/structureArea";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 
@@ -37,12 +38,9 @@ export type StructureExtinguisherSummary = {
 // Area / ability-unit calculations
 // ---------------------------------------------------------------------------
 
-/** Sum of the effective floor area of every structure on the floor, in m². */
+/** Sum of the effective floor area of every structure on the floor, in m² (doors excluded). */
 export function calculateTotalFloorArea(structures: Structure[], scale: number): number {
-  return pixelAreaToSquareMeters(
-    structures.reduce((sum, structure) => sum + computeEffectivePixelArea(structure), 0),
-    scale
-  );
+  return pixelAreaToSquareMeters(computeTotalStructurePixelArea(structures), scale);
 }
 
 /** Bathroom-code style rule: 1 required ability unit per 100㎡ of floor area. */

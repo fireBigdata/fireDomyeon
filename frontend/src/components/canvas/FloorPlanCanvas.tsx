@@ -6,6 +6,7 @@ import type Konva from "konva";
 import type { ExtinguisherPlacement, HeatDetector, Structure } from "@/types/floorplan";
 import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
+import { isDoorStructure } from "@/lib/structureArea";
 import StructureShape from "./StructureShape";
 import HeatDetectorShape from "./HeatDetectorShape";
 
@@ -128,6 +129,28 @@ export default function FloorPlanCanvas({
     transformer.getLayer()?.batchDraw();
   }, [selectedStructureId, structures]);
 
+  // Doors render last (topmost layer) so they always sit above every other
+  // structure, extinguisher, and heat detector on the canvas.
+  const doorStructures = structures.filter(isDoorStructure);
+  const regularStructures = structures.filter((structure) => !isDoorStructure(structure));
+
+  const renderStructure = (structure: Structure) => (
+    <StructureShape
+      key={structure.id}
+      structure={structure}
+      scale={scale}
+      isSelected={structure.id === selectedStructureId}
+      selectedPartitionId={
+        structure.id === selectedStructureId ? selectedPartitionId : null
+      }
+      onSelect={onSelect}
+      onSelectPartition={onSelectPartition}
+      onResizePartition={onResizePartition}
+      onChange={onChange}
+      registerNode={registerNode}
+    />
+  );
+
   return (
     <div className="relative">
       <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-md border border-gray-300 bg-white p-1 shadow-sm">
@@ -182,22 +205,7 @@ export default function FloorPlanCanvas({
             fill={CANVAS_BACKGROUND_COLOR}
             listening={false}
           />
-          {structures.map((structure) => (
-            <StructureShape
-              key={structure.id}
-              structure={structure}
-              scale={scale}
-              isSelected={structure.id === selectedStructureId}
-              selectedPartitionId={
-                structure.id === selectedStructureId ? selectedPartitionId : null
-              }
-              onSelect={onSelect}
-              onSelectPartition={onSelectPartition}
-              onResizePartition={onResizePartition}
-              onChange={onChange}
-              registerNode={registerNode}
-            />
-          ))}
+          {regularStructures.map(renderStructure)}
         {extinguisherPlacements.map((placement) => (
           <Group key={placement.id} x={placement.x} y={placement.y} listening={false}>
             <Circle radius={10} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />
@@ -228,6 +236,7 @@ export default function FloorPlanCanvas({
             />
           );
         })}
+        {doorStructures.map(renderStructure)}
         <Transformer
           ref={transformerRef}
           rotateEnabled={false}

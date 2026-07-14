@@ -75,7 +75,11 @@ export default function StructureShape({
     "구조물 정보",
     `종류: ${typeLabel}`,
     `면적: ${areaM2.toFixed(1)}m²`,
+    `가로: ${widthM.toFixed(1)}m`,
+    `세로: ${heightM.toFixed(1)}m`,
   ];
+  const TOOLTIP_WIDTH = 150;
+  const TOOLTIP_HEIGHT = 102;
 
   useEffect(() => {
     registerNode(structure.id, groupRef.current);
@@ -143,26 +147,22 @@ export default function StructureShape({
         fill="#111827"
         listening={false}
       />
-      <Text
-        text={`가로: ${widthM.toFixed(1)}m  세로: ${heightM.toFixed(1)}m`}
-        x={0}
-        y={structure.height + 4}
-        width={structure.width}
-        align="center"
-        fontSize={10}
-        fill="#374151"
-        listening={false}
-      />
       {isSelected && (
         // Anchored below-right of the room's top-left corner (rather than
         // above), mirroring HeatDetectorShape's tooltip so an upward
         // tooltip doesn't get clipped by the stage's top edge.
         <Group x={12} y={12} listening={false}>
-          <Rect width={150} height={68} fill="#111827" opacity={0.92} cornerRadius={4} />
+          <Rect
+            width={TOOLTIP_WIDTH}
+            height={TOOLTIP_HEIGHT}
+            fill="#111827"
+            opacity={0.92}
+            cornerRadius={4}
+          />
           <Text
             text={tooltipLines.join("\n")}
-            width={150}
-            height={68}
+            width={TOOLTIP_WIDTH}
+            height={TOOLTIP_HEIGHT}
             padding={8}
             fontSize={11}
             lineHeight={1.5}
