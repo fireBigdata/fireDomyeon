@@ -4,6 +4,7 @@ import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
+import { useExitLightPlacement } from "@/hooks/useExitLightPlacement";
 import TopBar from "@/components/layout/TopBar";
 import FloorBar from "@/components/layout/FloorBar";
 import LeftPanel from "@/components/layout/LeftPanel";
@@ -40,6 +41,8 @@ export default function Home() {
     setExtinguisherPlacements,
     selectHeatDetector,
     setHeatDetectors,
+    selectExitLight,
+    setExitLights,
   } = useFloorPlanState();
 
   const saveFloorPlan = useSaveFloorPlan();
@@ -66,6 +69,9 @@ export default function Home() {
     summary: heatDetectorSummary,
     autoPlace: autoPlaceHeatDetectors,
   } = useHeatDetectorPlacement(currentFloor, state.scale, setHeatDetectors);
+
+  const { summary: exitLightSummary, autoPlace: autoPlaceExitLights } =
+    useExitLightPlacement(currentFloor, state.scale, setExitLights);
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-gray-50">
@@ -103,6 +109,8 @@ export default function Home() {
           heatDetectorError={heatDetectorError}
           onAutoPlaceHeatDetectors={autoPlaceHeatDetectors}
           heatDetectorSummary={heatDetectorSummary}
+          onAutoPlaceExitLights={autoPlaceExitLights}
+          exitLightSummary={exitLightSummary}
         />
 
         <main className="flex flex-1 flex-col items-center gap-4 overflow-auto p-6">
@@ -118,10 +126,13 @@ export default function Home() {
             extinguisherPlacements={currentFloor.extinguisherPlacements}
             heatDetectors={currentFloor.heatDetectors}
             selectedHeatDetectorId={state.selectedHeatDetectorId}
+            exitLights={currentFloor.exitLights}
+            selectedExitLightId={state.selectedExitLightId}
             onSelect={selectStructure}
             onSelectPartition={selectPartition}
             onResizePartition={resizePartition}
             onSelectHeatDetector={selectHeatDetector}
+            onSelectExitLight={selectExitLight}
             onChange={updateStructure}
           />
         </main>

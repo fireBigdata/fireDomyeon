@@ -3,10 +3,12 @@
 import type { EntranceType, FacilityType, StructureType, RoomType } from "@/types/floorplan";
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
+import type { ExitLightSummary } from "@/lib/exitLightPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar from "@/components/panels/StructureToolbar";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
+import ExitLightPanel from "@/components/panels/ExitLightPanel";
 
 type LeftPanelProps = {
   facilityType: FacilityType;
@@ -28,6 +30,8 @@ type LeftPanelProps = {
   heatDetectorError: string | null;
   onAutoPlaceHeatDetectors: () => void;
   heatDetectorSummary: HeatDetectorSummary | null;
+  onAutoPlaceExitLights: () => void;
+  exitLightSummary: ExitLightSummary | null;
 };
 
 export default function LeftPanel({
@@ -46,6 +50,8 @@ export default function LeftPanel({
   heatDetectorError,
   onAutoPlaceHeatDetectors,
   heatDetectorSummary,
+  onAutoPlaceExitLights,
+  exitLightSummary,
 }: LeftPanelProps) {
   return (
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
@@ -68,6 +74,7 @@ export default function LeftPanel({
         onAutoPlace={onAutoPlaceHeatDetectors}
         summary={heatDetectorSummary}
       />
+      <ExitLightPanel onAutoPlace={onAutoPlaceExitLights} summary={exitLightSummary} />
     </aside>
   );
 }

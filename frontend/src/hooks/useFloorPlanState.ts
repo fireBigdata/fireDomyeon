@@ -13,6 +13,7 @@ import type {
   Structure,
   StructureType,
 } from "@/types/floorplan";
+import type { ExitLight } from "@/types/exitLight";
 import { createStructure } from "@/lib/structureFactory";
 import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
 import { pixelAreaToSquareMeters } from "@/lib/area";
@@ -36,6 +37,7 @@ function createInitialState(): FloorPlanState {
     selectedStructureId: null,
     selectedPartitionId: null,
     selectedHeatDetectorId: null,
+    selectedExitLightId: null,
     scale: 1,
   };
 }
@@ -120,6 +122,11 @@ export function useFloorPlanState(initial?: FloorPlanState) {
           .filter((detector) => detector.roomId === id)
           .map((detector) => detector.id)
       );
+      const removedExitLightIds = new Set(
+        floor.exitLights
+          .filter((light) => light.structureId === id)
+          .map((light) => light.id)
+      );
 
       return {
         ...prev,
@@ -135,6 +142,9 @@ export function useFloorPlanState(initial?: FloorPlanState) {
                 extinguisherPlacements: f.extinguisherPlacements.filter(
                   (placement) => placement.structureId !== id
                 ),
+                exitLights: f.exitLights.filter(
+                  (light) => light.structureId !== id
+                ),
               }
         ),
         selectedStructureId:
@@ -146,6 +156,11 @@ export function useFloorPlanState(initial?: FloorPlanState) {
           removedDetectorIds.has(prev.selectedHeatDetectorId)
             ? null
             : prev.selectedHeatDetectorId,
+        selectedExitLightId:
+          prev.selectedExitLightId &&
+          removedExitLightIds.has(prev.selectedExitLightId)
+            ? null
+            : prev.selectedExitLightId,
       };
     });
   }, []);
@@ -180,6 +195,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       selectedStructureId: id,
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
+      selectedExitLightId: null,
     }));
   }, []);
 
@@ -320,6 +336,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedStructureId: null,
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
+        selectedExitLightId: null,
       };
     });
   }, []);
@@ -336,6 +353,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedStructureId: null,
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
+        selectedExitLightId: null,
       };
     });
   }, []);
@@ -353,6 +371,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedStructureId: null,
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
+        selectedExitLightId: null,
       };
     });
   }, []);
@@ -371,6 +390,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       selectedStructureId: null,
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
+      selectedExitLightId: null,
     }));
   }, []);
 
@@ -407,6 +427,26 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         ],
       }));
       setState((prev) => ({ ...prev, selectedHeatDetectorId: null }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const selectExitLight = useCallback((id: string | null) => {
+    setState((prev) => ({ ...prev, selectedExitLightId: id }));
+  }, []);
+
+  const setExitLights = useCallback(
+    (lights: ExitLight[]) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        // Re-placing replaces only the previous auto-placed batch; any
+        // manually placed lights (isAutoPlaced === false) are kept.
+        exitLights: [
+          ...floor.exitLights.filter((light) => !light.isAutoPlaced),
+          ...lights,
+        ],
+      }));
+      setState((prev) => ({ ...prev, selectedExitLightId: null }));
     },
     [updateCurrentFloor]
   );
@@ -460,6 +500,8 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setExtinguisherPlacements,
     selectHeatDetector,
     setHeatDetectors,
+    selectExitLight,
+    setExitLights,
     loadFloorPlanState,
     ROOT_LEAF_ID,
   };

@@ -4,11 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
 import type { ExtinguisherPlacement, HeatDetector, Structure } from "@/types/floorplan";
+import type { ExitLight } from "@/types/exitLight";
 import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 import { isDoorStructure } from "@/lib/structureArea";
+import { getStructureLabel } from "@/lib/structureLabel";
 import StructureShape from "./StructureShape";
 import HeatDetectorShape from "./HeatDetectorShape";
+import ExitLightShape from "./ExitLightShape";
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 600;
@@ -32,10 +35,13 @@ type FloorPlanCanvasProps = {
   extinguisherPlacements: ExtinguisherPlacement[];
   heatDetectors: HeatDetector[];
   selectedHeatDetectorId: string | null;
+  exitLights: ExitLight[];
+  selectedExitLightId: string | null;
   onSelect: (id: string | null) => void;
   onSelectPartition: (structureId: string, leafId: string) => void;
   onResizePartition: (structureId: string, splitId: string, ratio: number) => void;
   onSelectHeatDetector: (id: string | null) => void;
+  onSelectExitLight: (id: string | null) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
 };
 
@@ -47,10 +53,13 @@ export default function FloorPlanCanvas({
   extinguisherPlacements,
   heatDetectors,
   selectedHeatDetectorId,
+  exitLights,
+  selectedExitLightId,
   onSelect,
   onSelectPartition,
   onResizePartition,
   onSelectHeatDetector,
+  onSelectExitLight,
   onChange,
 }: FloorPlanCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -129,8 +138,9 @@ export default function FloorPlanCanvas({
     transformer.getLayer()?.batchDraw();
   }, [selectedStructureId, structures]);
 
-  // Doors render last (topmost layer) so they always sit above every other
-  // structure, extinguisher, and heat detector on the canvas.
+  // Doors render after every other structure (topmost among structures) so
+  // they always stay visible where they overlap a room/corridor; markers
+  // (extinguishers/detectors/exit lights) still render above doors too.
   const doorStructures = structures.filter(isDoorStructure);
   const regularStructures = structures.filter((structure) => !isDoorStructure(structure));
 
@@ -195,6 +205,7 @@ export default function FloorPlanCanvas({
           if (e.target === e.target.getStage()) {
             onSelect(null);
             onSelectHeatDetector(null);
+            onSelectExitLight(null);
           }
         }}
       >
@@ -206,6 +217,7 @@ export default function FloorPlanCanvas({
             listening={false}
           />
           {regularStructures.map(renderStructure)}
+        {doorStructures.map(renderStructure)}
         {extinguisherPlacements.map((placement) => (
           <Group key={placement.id} x={placement.x} y={placement.y} listening={false}>
             <Circle radius={10} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />
@@ -236,7 +248,19 @@ export default function FloorPlanCanvas({
             />
           );
         })}
-        {doorStructures.map(renderStructure)}
+        {exitLights.map((light) => {
+          const owner = structures.find((s) => s.id === light.structureId);
+          const structureLabel = owner ? getStructureLabel(owner) : "구조물";
+          return (
+            <ExitLightShape
+              key={light.id}
+              light={light}
+              structureLabel={structureLabel}
+              isSelected={light.id === selectedExitLightId}
+              onToggleSelect={onSelectExitLight}
+            />
+          );
+        })}
         <Transformer
           ref={transformerRef}
           rotateEnabled={false}

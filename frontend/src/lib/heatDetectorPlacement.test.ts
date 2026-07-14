@@ -196,6 +196,7 @@ describe("autoPlaceHeatDetectors", () => {
       structures,
       extinguisherPlacements: [],
       heatDetectors: [],
+      exitLights: [],
     };
   }
 

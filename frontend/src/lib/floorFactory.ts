@@ -9,6 +9,7 @@ export function createFloor(name: string): Floor {
     structures: [],
     extinguisherPlacements: [],
     heatDetectors: [],
+    exitLights: [],
   };
 }
 
@@ -28,6 +29,7 @@ export function cloneFloor(floor: Floor, name: string): Floor {
     // (via createId) rather than dropping them.
     extinguisherPlacements: [],
     heatDetectors: [],
+    exitLights: [],
   };
 }
 

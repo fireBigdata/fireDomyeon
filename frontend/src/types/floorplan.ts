@@ -1,5 +1,6 @@
 import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { HeatDetector } from "@/types/heatDetector";
+import type { ExitLight } from "@/types/exitLight";
 
 export type StructureType =
   | "room"
@@ -76,6 +77,7 @@ export type Floor = {
   structures: Structure[];
   extinguisherPlacements: ExtinguisherPlacement[];
   heatDetectors: HeatDetector[];
+  exitLights: ExitLight[];
 };
 
 export type FloorPlanState = {
@@ -87,7 +89,8 @@ export type FloorPlanState = {
   selectedStructureId: string | null;
   selectedPartitionId: string | null;
   selectedHeatDetectorId: string | null;
+  selectedExitLightId: string | null;
   scale: number;
 };
 
-export type { ExtinguisherPlacement, HeatDetector };
+export type { ExtinguisherPlacement, HeatDetector, ExitLight };

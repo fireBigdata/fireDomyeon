@@ -9,6 +9,7 @@ import { ROOM_TYPE_DEFAULTS, DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
 import { ENTRANCE_TYPE_DEFAULTS, DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
 import { computeEffectivePixelArea } from "@/lib/partitionTree";
 import { pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
+import { getStructureLabel } from "@/lib/structureLabel";
 import PartitionShape from "./PartitionShape";
 
 type StructureShapeProps = {
@@ -66,7 +67,7 @@ export default function StructureShape({
     ? ENTRANCE_TYPE_DEFAULTS[structure.entranceType ?? DEFAULT_ENTRANCE_TYPE]
     : null;
   const typeAppearance = roomAppearance ?? entranceAppearance;
-  const typeLabel = typeAppearance?.label ?? defaults.label;
+  const typeLabel = getStructureLabel(structure);
   const widthM = pixelLengthToMeters(structure.width, scale);
   const heightM = pixelLengthToMeters(structure.height, scale);
   const areaM2 = pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);

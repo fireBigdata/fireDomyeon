@@ -7,6 +7,7 @@ FacilityType = Literal["apartment", "house"]
 RoomType = Literal["LIVING", "KITCHEN", "BOILER", "HALLWAY"]
 EntranceType = Literal["COMMON", "EMERGENCY", "DOOR"]
 PartitionDirection = Literal["vertical", "horizontal"]
+ExitLightCategory = Literal["EXIT", "CORRIDOR", "STAIRS"]
 
 
 class PartitionLeaf(BaseModel):
@@ -79,6 +80,22 @@ class HeatDetector(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class ExitLight(BaseModel):
+    id: str
+    floor_id: str = Field(alias="floorId")
+    # Structure (entrance/corridor/room/stairs) this light was placed for.
+    structure_id: str = Field(alias="structureId")
+    category: ExitLightCategory
+    x: float
+    y: float
+    # True when placed to satisfy the mandatory bend/turn rule, not the
+    # regular spacing rule.
+    is_bend_point: bool = Field(alias="isBendPoint")
+    is_auto_placed: bool = Field(alias="isAutoPlaced")
+
+    model_config = {"populate_by_name": True}
+
+
 class Floor(BaseModel):
     id: str
     name: str
@@ -89,6 +106,7 @@ class Floor(BaseModel):
     heat_detectors: list[HeatDetector] = Field(
         default_factory=list, alias="heatDetectors"
     )
+    exit_lights: list[ExitLight] = Field(default_factory=list, alias="exitLights")
 
     model_config = {"populate_by_name": True}
 
@@ -107,6 +125,9 @@ class FloorPlanState(BaseModel):
     )
     selected_heat_detector_id: Optional[str] = Field(
         default=None, alias="selectedHeatDetectorId"
+    )
+    selected_exit_light_id: Optional[str] = Field(
+        default=None, alias="selectedExitLightId"
     )
     scale: float = 1
 
