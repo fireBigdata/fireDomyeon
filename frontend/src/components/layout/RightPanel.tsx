@@ -1,6 +1,6 @@
 "use client";
 
-import type { PartitionDirection, RoomType, Structure } from "@/types/floorplan";
+import type { EntranceType, PartitionDirection, RoomType, Structure } from "@/types/floorplan";
 import StructureInfoPanel from "@/components/panels/StructureInfoPanel";
 
 type RightPanelProps = {
@@ -9,6 +9,7 @@ type RightPanelProps = {
   selectedPartitionId: string | null;
   onChange: (id: string, changes: Partial<Structure>) => void;
   onRoomTypeChange: (id: string, roomType: RoomType) => void;
+  onEntranceTypeChange: (id: string, entranceType: EntranceType) => void;
   onSplitPartition: (
     structureId: string,
     leafId: string,
@@ -27,6 +28,7 @@ export default function RightPanel({
   selectedPartitionId,
   onChange,
   onRoomTypeChange,
+  onEntranceTypeChange,
   onSplitPartition,
   onResetPartitions,
   onMergePartition,
@@ -43,6 +45,7 @@ export default function RightPanel({
         selectedPartitionId={selectedPartitionId}
         onChange={onChange}
         onRoomTypeChange={onRoomTypeChange}
+        onEntranceTypeChange={onEntranceTypeChange}
         onSplitPartition={onSplitPartition}
         onResetPartitions={onResetPartitions}
         onMergePartition={onMergePartition}

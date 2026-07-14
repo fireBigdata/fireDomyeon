@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type {
+  EntranceType,
   ExtinguisherPlacement,
   FacilityType,
   Floor,
@@ -72,11 +73,16 @@ export function useFloorPlanState(initial?: FloorPlanState) {
   }, []);
 
   const addStructure = useCallback(
-    (type: StructureType, roomType?: RoomType) => {
+    (type: StructureType, roomType?: RoomType, entranceType?: EntranceType) => {
       setState((prev) => {
         const floor = prev.floors.find((f) => f.id === prev.currentFloorId);
         if (!floor) return prev;
-        const structure = createStructure(type, floor.structures.length, roomType);
+        const structure = createStructure(
+          type,
+          floor.structures.length,
+          roomType,
+          entranceType
+        );
         return {
           ...prev,
           floors: prev.floors.map((f) =>
@@ -150,6 +156,18 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         ...floor,
         structures: floor.structures.map((structure) =>
           structure.id === id ? { ...structure, roomType } : structure
+        ),
+      }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const setEntranceType = useCallback(
+    (id: string, entranceType: EntranceType) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === id ? { ...structure, entranceType } : structure
         ),
       }));
     },
@@ -428,6 +446,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     updateStructure,
     removeStructure,
     setRoomType,
+    setEntranceType,
     selectStructure,
     selectPartition,
     splitPartition,

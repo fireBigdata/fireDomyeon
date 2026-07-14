@@ -19,6 +19,15 @@ export enum RoomType {
   HALLWAY = "HALLWAY",
 }
 
+// Entrance usage type. To add a new kind: extend this enum and add a
+// matching entry in ENTRANCE_TYPE_DEFAULTS / ENTRANCE_TYPE_ORDER
+// (constants/entranceTypes.ts).
+export enum EntranceType {
+  COMMON = "COMMON", // 공동현관
+  EMERGENCY = "EMERGENCY", // 비상구
+  DOOR = "DOOR", // 문
+}
+
 export type PartitionDirection = "vertical" | "horizontal";
 
 export type PartitionLeaf = {
@@ -57,6 +66,8 @@ export type Structure = {
   roomType?: RoomType;
   /** Only meaningful when type === "room". Undefined = single undivided space. */
   partitions?: PartitionNode;
+  /** Only meaningful when type === "entrance". */
+  entranceType?: EntranceType;
 };
 
 export type Floor = {

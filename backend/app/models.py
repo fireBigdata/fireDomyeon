@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 StructureType = Literal["room", "corridor", "entrance", "elevator", "stairs"]
 FacilityType = Literal["apartment", "house"]
 RoomType = Literal["LIVING", "KITCHEN", "BOILER", "HALLWAY"]
+EntranceType = Literal["COMMON", "EMERGENCY", "DOOR"]
 PartitionDirection = Literal["vertical", "horizontal"]
 
 
@@ -45,6 +46,8 @@ class Structure(BaseModel):
     # Only meaningful when type == "room".
     room_type: Optional[RoomType] = Field(default=None, alias="roomType")
     partitions: Optional[PartitionNode] = None
+    # Only meaningful when type == "entrance".
+    entrance_type: Optional[EntranceType] = Field(default=None, alias="entranceType")
 
     model_config = {"populate_by_name": True}
 

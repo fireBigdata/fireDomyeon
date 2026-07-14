@@ -6,6 +6,7 @@ import type Konva from "konva";
 import type { Structure } from "@/types/floorplan";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { ROOM_TYPE_DEFAULTS, DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
+import { ENTRANCE_TYPE_DEFAULTS, DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
 import { computeEffectivePixelArea } from "@/lib/partitionTree";
 import { pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
 import PartitionShape from "./PartitionShape";
@@ -57,10 +58,15 @@ export default function StructureShape({
   const groupRef = useRef<Konva.Group>(null);
   const defaults = STRUCTURE_DEFAULTS[structure.type];
   const isRoom = structure.type === "room";
+  const isEntrance = structure.type === "entrance";
   const roomAppearance = isRoom
     ? ROOM_TYPE_DEFAULTS[structure.roomType ?? DEFAULT_ROOM_TYPE]
     : null;
-  const typeLabel = roomAppearance?.label ?? defaults.label;
+  const entranceAppearance = isEntrance
+    ? ENTRANCE_TYPE_DEFAULTS[structure.entranceType ?? DEFAULT_ENTRANCE_TYPE]
+    : null;
+  const typeAppearance = roomAppearance ?? entranceAppearance;
+  const typeLabel = typeAppearance?.label ?? defaults.label;
   const widthM = pixelLengthToMeters(structure.width, scale);
   const heightM = pixelLengthToMeters(structure.height, scale);
   const areaM2 = pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);
@@ -109,8 +115,8 @@ export default function StructureShape({
       <Rect
         width={structure.width}
         height={structure.height}
-        fill={roomAppearance?.fill ?? defaults.fill}
-        stroke={isSelected ? "#111827" : roomAppearance?.stroke ?? defaults.stroke}
+        fill={typeAppearance?.fill ?? defaults.fill}
+        stroke={isSelected ? "#111827" : typeAppearance?.stroke ?? defaults.stroke}
         strokeWidth={isSelected ? 2 : 1}
       />
       {structure.type === "stairs" && (

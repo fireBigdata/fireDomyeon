@@ -23,6 +23,7 @@ export default function Home() {
     updateStructure,
     removeStructure,
     setRoomType,
+    setEntranceType,
     selectStructure,
     selectPartition,
     splitPartition,
@@ -131,6 +132,7 @@ export default function Home() {
           selectedPartitionId={state.selectedPartitionId}
           onChange={updateStructure}
           onRoomTypeChange={setRoomType}
+          onEntranceTypeChange={setEntranceType}
           onSplitPartition={splitPartition}
           onResetPartitions={resetPartitions}
           onMergePartition={mergePartition}

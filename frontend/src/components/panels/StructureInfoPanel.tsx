@@ -1,9 +1,11 @@
 "use client";
 
-import type { PartitionDirection, RoomType, Structure } from "@/types/floorplan";
+import type { EntranceType, PartitionDirection, RoomType, Structure } from "@/types/floorplan";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
+import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
 import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
+import EntranceTypeSelect from "@/components/panels/EntranceTypeSelect";
 import { ROOT_LEAF_ID, computeEffectivePixelArea, findPartitionNode } from "@/lib/partitionTree";
 import { formatArea, pixelAreaToSquareMeters } from "@/lib/area";
 
@@ -13,6 +15,7 @@ type StructureInfoPanelProps = {
   selectedPartitionId: string | null;
   onChange: (id: string, changes: Partial<Structure>) => void;
   onRoomTypeChange: (id: string, roomType: RoomType) => void;
+  onEntranceTypeChange: (id: string, entranceType: EntranceType) => void;
   onSplitPartition: (
     structureId: string,
     leafId: string,
@@ -40,6 +43,7 @@ export default function StructureInfoPanel({
   selectedPartitionId,
   onChange,
   onRoomTypeChange,
+  onEntranceTypeChange,
   onSplitPartition,
   onResetPartitions,
   onMergePartition,
@@ -57,6 +61,7 @@ export default function StructureInfoPanel({
 
   const area = pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);
   const isRoom = structure.type === "room";
+  const isEntrance = structure.type === "entrance";
   const targetLeafId = selectedPartitionId ?? ROOT_LEAF_ID;
   const selectedNode = selectedPartitionId
     ? findPartitionNode(structure.partitions, selectedPartitionId)
@@ -196,6 +201,16 @@ export default function StructureInfoPanel({
             )}
           </div>
         </>
+      )}
+
+      {isEntrance && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-gray-500">출입구 종류</span>
+          <EntranceTypeSelect
+            value={structure.entranceType ?? DEFAULT_ENTRANCE_TYPE}
+            onChange={(value) => onEntranceTypeChange(structure.id, value)}
+          />
+        </label>
       )}
 
       <button

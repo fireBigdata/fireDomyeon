@@ -1,6 +1,7 @@
-import type { RoomType, Structure, StructureType } from "@/types/floorplan";
+import type { EntranceType, RoomType, Structure, StructureType } from "@/types/floorplan";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
+import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
 import { createId } from "@/lib/id";
 import { clonePartitionTree } from "@/lib/partitionTree";
 
@@ -11,7 +12,8 @@ const SPAWN_WRAP = 5;
 export function createStructure(
   type: StructureType,
   existingCount: number,
-  roomType?: RoomType
+  roomType?: RoomType,
+  entranceType?: EntranceType
 ): Structure {
   const defaults = STRUCTURE_DEFAULTS[type];
   const offset = existingCount % SPAWN_WRAP;
@@ -25,6 +27,9 @@ export function createStructure(
     height: defaults.height,
     rotation: 0,
     ...(type === "room" ? { roomType: roomType ?? DEFAULT_ROOM_TYPE } : {}),
+    ...(type === "entrance"
+      ? { entranceType: entranceType ?? DEFAULT_ENTRANCE_TYPE }
+      : {}),
   };
 }
 

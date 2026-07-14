@@ -1,6 +1,6 @@
 "use client";
 
-import type { FacilityType, StructureType, RoomType } from "@/types/floorplan";
+import type { EntranceType, FacilityType, StructureType, RoomType } from "@/types/floorplan";
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
@@ -11,7 +11,11 @@ import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 type LeftPanelProps = {
   facilityType: FacilityType;
   onFacilityTypeChange: (value: FacilityType) => void;
-  onAddStructure: (type: StructureType, roomType?: RoomType) => void;
+  onAddStructure: (
+    type: StructureType,
+    roomType?: RoomType,
+    entranceType?: EntranceType
+  ) => void;
   extinguisherTypeId: string;
   onExtinguisherTypeChange: (id: string) => void;
   extinguisherAbilityUnitsInput: string;
