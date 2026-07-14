@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { Layer, Rect, Stage, Transformer } from "react-konva";
+import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
-import type { Structure } from "@/types/floorplan";
+import type { ExtinguisherPlacement, Structure } from "@/types/floorplan";
+import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
 import StructureShape from "./StructureShape";
 
 const CANVAS_WIDTH = 900;
@@ -12,14 +13,22 @@ const CANVAS_HEIGHT = 600;
 type FloorPlanCanvasProps = {
   structures: Structure[];
   selectedStructureId: string | null;
+  selectedPartitionId: string | null;
+  extinguisherPlacements: ExtinguisherPlacement[];
   onSelect: (id: string | null) => void;
+  onSelectPartition: (structureId: string, leafId: string) => void;
+  onResizePartition: (structureId: string, splitId: string, ratio: number) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
 };
 
 export default function FloorPlanCanvas({
   structures,
   selectedStructureId,
+  selectedPartitionId,
+  extinguisherPlacements,
   onSelect,
+  onSelectPartition,
+  onResizePartition,
   onChange,
 }: FloorPlanCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -64,7 +73,7 @@ export default function FloorPlanCanvas({
         <Rect
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          fill="#f9fafb"
+          fill={CANVAS_BACKGROUND_COLOR}
           listening={false}
         />
         {structures.map((structure) => (
@@ -72,10 +81,31 @@ export default function FloorPlanCanvas({
             key={structure.id}
             structure={structure}
             isSelected={structure.id === selectedStructureId}
+            selectedPartitionId={
+              structure.id === selectedStructureId ? selectedPartitionId : null
+            }
             onSelect={onSelect}
+            onSelectPartition={onSelectPartition}
+            onResizePartition={onResizePartition}
             onChange={onChange}
             registerNode={registerNode}
           />
+        ))}
+        {extinguisherPlacements.map((placement) => (
+          <Group key={placement.id} x={placement.x} y={placement.y} listening={false}>
+            <Circle radius={10} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />
+            <Text
+              text="소"
+              width={20}
+              height={20}
+              offsetX={10}
+              offsetY={10}
+              align="center"
+              verticalAlign="middle"
+              fontSize={10}
+              fill="#ffffff"
+            />
+          </Group>
         ))}
         <Transformer
           ref={transformerRef}

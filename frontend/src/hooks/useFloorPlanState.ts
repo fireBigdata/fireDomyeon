@@ -2,23 +2,63 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type {
+  ExtinguisherPlacement,
   FacilityType,
+  Floor,
   FloorPlanState,
+  PartitionDirection,
+  RoomType,
   Structure,
   StructureType,
 } from "@/types/floorplan";
 import { createStructure } from "@/lib/structureFactory";
+import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
+import { pixelAreaToSquareMeters } from "@/lib/area";
+import {
+  ROOT_LEAF_ID,
+  deleteRegionAt,
+  mergePartitionAt,
+  restoreRegionAt,
+  setPartitionRatio,
+  splitPartitionAt,
+} from "@/lib/partitionTree";
 
-const INITIAL_STATE: FloorPlanState = {
-  name: "새 도면",
-  facilityType: "apartment",
-  structures: [],
-  selectedStructureId: null,
-  scale: 1,
-};
+function createInitialState(): FloorPlanState {
+  const floor = createFloor("1F");
+  return {
+    name: "새 도면",
+    facilityType: "apartment",
+    floors: [floor],
+    currentFloorId: floor.id,
+    selectedStructureId: null,
+    selectedPartitionId: null,
+    scale: 1,
+  };
+}
 
-export function useFloorPlanState(initial: FloorPlanState = INITIAL_STATE) {
-  const [state, setState] = useState<FloorPlanState>(initial);
+export function useFloorPlanState(initial?: FloorPlanState) {
+  const [state, setState] = useState<FloorPlanState>(
+    initial ?? createInitialState
+  );
+
+  const currentFloor = useMemo(
+    () =>
+      state.floors.find((floor) => floor.id === state.currentFloorId) ??
+      state.floors[0],
+    [state.floors, state.currentFloorId]
+  );
+
+  const updateCurrentFloor = useCallback(
+    (updater: (floor: Floor) => Floor) => {
+      setState((prev) => ({
+        ...prev,
+        floors: prev.floors.map((floor) =>
+          floor.id === prev.currentFloorId ? updater(floor) : floor
+        ),
+      }));
+    },
+    []
+  );
 
   const setName = useCallback((name: string) => {
     setState((prev) => ({ ...prev, name }));
@@ -28,32 +68,255 @@ export function useFloorPlanState(initial: FloorPlanState = INITIAL_STATE) {
     setState((prev) => ({ ...prev, facilityType }));
   }, []);
 
-  const addStructure = useCallback((type: StructureType) => {
-    setState((prev) => {
-      const structure = createStructure(type, prev.structures.length);
-      return {
-        ...prev,
-        structures: [...prev.structures, structure],
-        selectedStructureId: structure.id,
-      };
-    });
-  }, []);
+  const addStructure = useCallback(
+    (type: StructureType, roomType?: RoomType) => {
+      setState((prev) => {
+        const floor = prev.floors.find((f) => f.id === prev.currentFloorId);
+        if (!floor) return prev;
+        const structure = createStructure(type, floor.structures.length, roomType);
+        return {
+          ...prev,
+          floors: prev.floors.map((f) =>
+            f.id === floor.id
+              ? { ...f, structures: [...f.structures, structure] }
+              : f
+          ),
+          selectedStructureId: structure.id,
+          selectedPartitionId: null,
+        };
+      });
+    },
+    []
+  );
 
   const updateStructure = useCallback(
     (id: string, changes: Partial<Omit<Structure, "id" | "type">>) => {
-      setState((prev) => ({
-        ...prev,
-        structures: prev.structures.map((structure) =>
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
           structure.id === id ? { ...structure, ...changes } : structure
         ),
+      }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const setRoomType = useCallback(
+    (id: string, roomType: RoomType) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === id ? { ...structure, roomType } : structure
+        ),
+      }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const selectStructure = useCallback((id: string | null) => {
+    setState((prev) => ({
+      ...prev,
+      selectedStructureId: id,
+      selectedPartitionId: null,
+    }));
+  }, []);
+
+  const selectPartition = useCallback(
+    (structureId: string, leafId: string | null) => {
+      setState((prev) => ({
+        ...prev,
+        selectedStructureId: structureId,
+        selectedPartitionId: leafId,
       }));
     },
     []
   );
 
-  const selectStructure = useCallback((id: string | null) => {
-    setState((prev) => ({ ...prev, selectedStructureId: id }));
+  const splitPartition = useCallback(
+    (structureId: string, leafId: string, direction: PartitionDirection) => {
+      setState((prev) => {
+        let newLeafId: string | null = null;
+        const floors = prev.floors.map((floor) => {
+          if (floor.id !== prev.currentFloorId) return floor;
+          return {
+            ...floor,
+            structures: floor.structures.map((structure) => {
+              if (structure.id !== structureId) return structure;
+              const result = splitPartitionAt(
+                structure.partitions,
+                leafId,
+                direction
+              );
+              newLeafId = result.newLeafId;
+              return { ...structure, partitions: result.node };
+            }),
+          };
+        });
+        return { ...prev, floors, selectedPartitionId: newLeafId };
+      });
+    },
+    []
+  );
+
+  const resetPartitions = useCallback(
+    (structureId: string) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === structureId
+            ? { ...structure, partitions: undefined }
+            : structure
+        ),
+      }));
+      setState((prev) => ({ ...prev, selectedPartitionId: null }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const resizePartition = useCallback(
+    (structureId: string, splitId: string, ratio: number) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === structureId
+            ? {
+                ...structure,
+                partitions: setPartitionRatio(
+                  structure.partitions,
+                  splitId,
+                  ratio
+                ),
+              }
+            : structure
+        ),
+      }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const mergePartition = useCallback(
+    (structureId: string, leafId: string) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === structureId
+            ? {
+                ...structure,
+                partitions: mergePartitionAt(structure.partitions, leafId),
+              }
+            : structure
+        ),
+      }));
+      setState((prev) => ({ ...prev, selectedPartitionId: null }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const deletePartitionRegion = useCallback(
+    (structureId: string, leafId: string) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === structureId
+            ? {
+                ...structure,
+                partitions: deleteRegionAt(structure.partitions, leafId),
+              }
+            : structure
+        ),
+      }));
+      setState((prev) => ({ ...prev, selectedPartitionId: null }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const restorePartitionRegion = useCallback(
+    (structureId: string, emptyId: string) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === structureId
+            ? {
+                ...structure,
+                partitions: restoreRegionAt(structure.partitions, emptyId),
+              }
+            : structure
+        ),
+      }));
+      setState((prev) => ({ ...prev, selectedPartitionId: null }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const addFloor = useCallback(() => {
+    setState((prev) => {
+      const floor = createFloor(nextFloorName(prev.floors));
+      return {
+        ...prev,
+        floors: [...prev.floors, floor],
+        currentFloorId: floor.id,
+        selectedStructureId: null,
+        selectedPartitionId: null,
+      };
+    });
   }, []);
+
+  const cloneCurrentFloor = useCallback(() => {
+    setState((prev) => {
+      const source = prev.floors.find((f) => f.id === prev.currentFloorId);
+      if (!source) return prev;
+      const cloned = cloneFloor(source, nextFloorName(prev.floors));
+      return {
+        ...prev,
+        floors: [...prev.floors, cloned],
+        currentFloorId: cloned.id,
+        selectedStructureId: null,
+        selectedPartitionId: null,
+      };
+    });
+  }, []);
+
+  const removeFloor = useCallback((floorId: string) => {
+    setState((prev) => {
+      if (prev.floors.length <= 1) return prev;
+      const floors = prev.floors.filter((f) => f.id !== floorId);
+      const currentFloorId =
+        prev.currentFloorId === floorId ? floors[0].id : prev.currentFloorId;
+      return {
+        ...prev,
+        floors,
+        currentFloorId,
+        selectedStructureId: null,
+        selectedPartitionId: null,
+      };
+    });
+  }, []);
+
+  const renameFloor = useCallback((floorId: string, name: string) => {
+    setState((prev) => ({
+      ...prev,
+      floors: prev.floors.map((f) => (f.id === floorId ? { ...f, name } : f)),
+    }));
+  }, []);
+
+  const selectFloor = useCallback((floorId: string) => {
+    setState((prev) => ({
+      ...prev,
+      currentFloorId: floorId,
+      selectedStructureId: null,
+      selectedPartitionId: null,
+    }));
+  }, []);
+
+  const setExtinguisherPlacements = useCallback(
+    (placements: ExtinguisherPlacement[]) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        extinguisherPlacements: placements,
+      }));
+    },
+    [updateCurrentFloor]
+  );
 
   const loadFloorPlanState = useCallback((next: FloorPlanState) => {
     setState(next);
@@ -61,29 +324,49 @@ export function useFloorPlanState(initial: FloorPlanState = INITIAL_STATE) {
 
   const selectedStructure = useMemo(
     () =>
-      state.structures.find((s) => s.id === state.selectedStructureId) ??
-      null,
-    [state.structures, state.selectedStructureId]
+      currentFloor.structures.find(
+        (s) => s.id === state.selectedStructureId
+      ) ?? null,
+    [currentFloor.structures, state.selectedStructureId]
   );
 
   const totalArea = useMemo(
     () =>
-      state.structures.reduce(
-        (sum, structure) => sum + structure.width * structure.height,
-        0
-      ) * state.scale,
-    [state.structures, state.scale]
+      pixelAreaToSquareMeters(
+        currentFloor.structures.reduce(
+          (sum, structure) => sum + structure.width * structure.height,
+          0
+        ),
+        state.scale
+      ),
+    [currentFloor.structures, state.scale]
   );
 
   return {
     state,
+    currentFloor,
     selectedStructure,
     totalArea,
     setName,
     setFacilityType,
     addStructure,
     updateStructure,
+    setRoomType,
     selectStructure,
+    selectPartition,
+    splitPartition,
+    resetPartitions,
+    resizePartition,
+    mergePartition,
+    deletePartitionRegion,
+    restorePartitionRegion,
+    addFloor,
+    cloneCurrentFloor,
+    removeFloor,
+    renameFloor,
+    selectFloor,
+    setExtinguisherPlacements,
     loadFloorPlanState,
+    ROOT_LEAF_ID,
   };
 }

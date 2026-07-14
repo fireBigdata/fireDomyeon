@@ -1,5 +1,7 @@
 "use client";
 
+import { formatArea } from "@/lib/area";
+
 type AreaSummaryProps = {
   totalArea: number;
   structureCount: number;
@@ -17,7 +19,7 @@ export default function AreaSummary({
       <span className="text-gray-500">
         전체 면적{" "}
         <span className="font-medium text-gray-800">
-          {totalArea.toFixed(1)}
+          {formatArea(totalArea)}
         </span>
       </span>
     </div>

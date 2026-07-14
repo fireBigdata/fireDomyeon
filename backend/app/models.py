@@ -1,9 +1,37 @@
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
 StructureType = Literal["room", "corridor", "entrance", "elevator", "stairs"]
 FacilityType = Literal["apartment", "house"]
+RoomType = Literal["LIVING", "KITCHEN", "BOILER", "HALLWAY"]
+PartitionDirection = Literal["vertical", "horizontal"]
+
+
+class PartitionLeaf(BaseModel):
+    kind: Literal["leaf"] = "leaf"
+    id: str
+
+
+class PartitionEmpty(BaseModel):
+    # A deleted region: keeps its slot in the tree but renders as a hole,
+    # allowing non-rectangular room shapes.
+    kind: Literal["empty"] = "empty"
+    id: str
+
+
+class PartitionSplit(BaseModel):
+    kind: Literal["split"] = "split"
+    id: str
+    direction: PartitionDirection
+    ratio: float
+    children: list["PartitionNode"]
+
+
+PartitionNode = Annotated[
+    Union[PartitionLeaf, PartitionEmpty, PartitionSplit], Field(discriminator="kind")
+]
+PartitionSplit.model_rebuild()
 
 
 class Structure(BaseModel):
@@ -14,15 +42,44 @@ class Structure(BaseModel):
     width: float
     height: float
     rotation: Optional[float] = 0
+    # Only meaningful when type == "room".
+    room_type: Optional[RoomType] = Field(default=None, alias="roomType")
+    partitions: Optional[PartitionNode] = None
+
+    model_config = {"populate_by_name": True}
+
+
+class ExtinguisherPlacement(BaseModel):
+    id: str
+    x: float
+    y: float
+    extinguisher_type_id: str = Field(alias="extinguisherTypeId")
+
+    model_config = {"populate_by_name": True}
+
+
+class Floor(BaseModel):
+    id: str
+    name: str
+    structures: list[Structure] = Field(default_factory=list)
+    extinguisher_placements: list[ExtinguisherPlacement] = Field(
+        default_factory=list, alias="extinguisherPlacements"
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class FloorPlanState(BaseModel):
     id: Optional[str] = None
     name: str
     facility_type: FacilityType = Field(alias="facilityType")
-    structures: list[Structure] = Field(default_factory=list)
+    floors: list[Floor] = Field(default_factory=list)
+    current_floor_id: str = Field(alias="currentFloorId")
     selected_structure_id: Optional[str] = Field(
         default=None, alias="selectedStructureId"
+    )
+    selected_partition_id: Optional[str] = Field(
+        default=None, alias="selectedPartitionId"
     )
     scale: float = 1
 

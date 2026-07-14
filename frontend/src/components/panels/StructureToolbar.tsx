@@ -1,23 +1,44 @@
 "use client";
 
-import type { StructureType } from "@/types/floorplan";
+import { useState } from "react";
+import { RoomType, type StructureType } from "@/types/floorplan";
 import {
   STRUCTURE_DEFAULTS,
   STRUCTURE_TYPE_ORDER,
 } from "@/constants/structureDefaults";
+import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
+import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
 
 type StructureToolbarProps = {
-  onAdd: (type: StructureType) => void;
+  onAdd: (type: StructureType, roomType?: RoomType) => void;
 };
 
+const NON_ROOM_TYPES = STRUCTURE_TYPE_ORDER.filter((type) => type !== "room");
+
 export default function StructureToolbar({ onAdd }: StructureToolbarProps) {
+  const [roomType, setRoomType] = useState<RoomType>(DEFAULT_ROOM_TYPE);
+
   return (
     <div>
       <label className="mb-1 block text-xs font-medium text-gray-500">
         구조물 추가
       </label>
       <div className="flex flex-col gap-1.5">
-        {STRUCTURE_TYPE_ORDER.map((type) => (
+        <div className="flex gap-1.5">
+          <RoomTypeSelect
+            value={roomType}
+            onChange={setRoomType}
+            className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => onAdd("room", roomType)}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            + 방
+          </button>
+        </div>
+        {NON_ROOM_TYPES.map((type) => (
           <button
             key={type}
             type="button"

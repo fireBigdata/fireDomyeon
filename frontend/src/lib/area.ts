@@ -1,0 +1,19 @@
+const SQUARE_METERS_PER_PYEONG = 3.305785;
+
+// Canvas/structure coordinates are edited in pixel-like units; this constant
+// is what converts those into real-world meters for area display.
+export const PIXELS_PER_METER = 30;
+
+/** Converts a raw width*height pixel area (optionally pre-multiplied by the floor plan's scale) into m². */
+export function pixelAreaToSquareMeters(pixelArea: number, scale: number): number {
+  return (pixelArea / (PIXELS_PER_METER * PIXELS_PER_METER)) * scale;
+}
+
+export function toPyeong(squareMeters: number): number {
+  return squareMeters / SQUARE_METERS_PER_PYEONG;
+}
+
+/** Formats an area (already in m²) with a pyeong conversion alongside it. */
+export function formatArea(squareMeters: number): string {
+  return `${squareMeters.toFixed(1)}㎡ (${toPyeong(squareMeters).toFixed(1)}평)`;
+}
