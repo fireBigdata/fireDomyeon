@@ -18,6 +18,15 @@ export type EquipmentProduct = {
   name: string;
   description: string;
   icon: string;
+  /** 제품 가격(원). 아직 정해지지 않았으면 null */
+  price: number | null;
+  /** public/images/equipment/ 안의 이미지 경로 (예: "/images/equipment/extinguisher-1.jpg"). 없으면 null */
+  image: string | null;
+  /**
+   * 다른 기능(자동 배치 계산 등)이 참조하는 제품별 고유 정수 값.
+   * 설비마다 의미가 다름 (예: 소화기 = 능력단위). 아직 정해지지 않았으면 null
+   */
+  abilityUnit: number | null;
 };
 
 export const NONE_PRODUCT_ID = "none" as const;
@@ -30,7 +39,16 @@ export type EquipmentSelectionState = Record<
   EquipmentSelectionValue
 >;
 
+/** 설비별 설치 개수. "설치 안 함"/미선택은 0, 제품 선택 시 기본값 1 */
+export type EquipmentQuantityState = Record<EquipmentName, number>;
+
 export type EquipmentSelectionSummary = Record<
   EquipmentName,
-  { productId: string | null; productName: string }
+  {
+    productId: string | null;
+    productName: string;
+    productPrice: number | null;
+    quantity: number;
+    lineTotal: number | null;
+  }
 >;
