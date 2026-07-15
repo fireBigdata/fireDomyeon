@@ -47,12 +47,12 @@ export default function ProductCard({
           </div>
         )}
         <span className="font-medium text-gray-900">{name}</span>
-        <span className="text-sm text-gray-500">{description}</span>
         {price != null && (
           <span className="text-sm font-semibold text-gray-800">
             {price.toLocaleString()}원
           </span>
         )}
+        <span className="text-sm text-gray-500">{description}</span>
       </button>
 
       {selected && onQuantityChange && (

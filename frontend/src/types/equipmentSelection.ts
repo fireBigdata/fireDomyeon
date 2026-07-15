@@ -10,7 +10,6 @@ export type EquipmentName =
   | "계단통로유도등"
   | "댐퍼"
   | "발신기"
-  | "탬퍼스위치(TS)"
   | "옥내소화전";
 
 export type EquipmentProduct = {

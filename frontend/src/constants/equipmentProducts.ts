@@ -29,7 +29,6 @@ export const EQUIPMENT_LIST: EquipmentName[] = [
   "계단통로유도등",
   "댐퍼",
   "발신기",
-  "탬퍼스위치(TS)",
   "옥내소화전",
 ];
 
@@ -45,7 +44,6 @@ export const EQUIPMENT_ICONS: Record<EquipmentName, string> = {
   계단통로유도등: "🪜",
   댐퍼: "🌀",
   발신기: "🔔",
-  "탬퍼스위치(TS)": "🔧",
   옥내소화전: "🚒",
 };
 
@@ -373,35 +371,6 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       name: "매입형 발신기",
       description: "벽면에 매립 설치하는 발신기",
       icon: "🔔",
-      price: null,
-      image: null,
-      abilityUnit: null,
-    },
-  ],
-  "탬퍼스위치(TS)": [
-    {
-      id: "tamper-switch-1",
-      name: "표준형 탬퍼스위치",
-      description: "밸브 개폐 상태를 감시하는 기본형 탬퍼스위치",
-      icon: "🔧",
-      price: null,
-      image: null,
-      abilityUnit: null,
-    },
-    {
-      id: "tamper-switch-2",
-      name: "방수형 탬퍼스위치",
-      description: "옥외 배관에 적합한 방수형 탬퍼스위치",
-      icon: "🔧",
-      price: null,
-      image: null,
-      abilityUnit: null,
-    },
-    {
-      id: "tamper-switch-3",
-      name: "무선형 탬퍼스위치",
-      description: "배선 없이 상태 신호를 전송하는 무선형 탬퍼스위치",
-      icon: "🔧",
       price: null,
       image: null,
       abilityUnit: null,

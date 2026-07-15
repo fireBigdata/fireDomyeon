@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
 import { useExitLightPlacement } from "@/hooks/useExitLightPlacement";
+import { saveFloorPlanStateToStorage } from "@/lib/floorPlanStorage";
 import TopBar from "@/components/layout/TopBar";
 import FloorBar from "@/components/layout/FloorBar";
 import LeftPanel from "@/components/layout/LeftPanel";
@@ -46,6 +48,12 @@ export default function Home() {
   } = useFloorPlanState();
 
   const saveFloorPlan = useSaveFloorPlan();
+
+  // Lets the equipment-selection page (a separate route with no shared
+  // state/Context) read this floor plan's latest floors/area/equipment data.
+  useEffect(() => {
+    saveFloorPlanStateToStorage(state);
+  }, [state]);
 
   const {
     typeId: extinguisherTypeId,
