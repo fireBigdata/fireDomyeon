@@ -7,6 +7,7 @@ import { useFloorPlanSummary } from "@/hooks/useFloorPlanSummary";
 import EquipmentListPanel from "@/components/equipment/EquipmentListPanel";
 import ProductPanel from "@/components/equipment/ProductPanel";
 import FloorPlanSummaryPanel from "@/components/equipment/FloorPlanSummaryPanel";
+import CostSummaryPanel from "@/components/equipment/CostSummaryPanel";
 
 export default function EquipmentSelectionPage() {
   const { selection, quantities, selectProduct, setQuantity, summary, totalCost } =
@@ -32,23 +33,11 @@ export default function EquipmentSelectionPage() {
         <div className="flex-1 overflow-y-auto">
           <FloorPlanSummaryPanel summary={floorPlanSummary} />
 
-          <div className="mx-6 mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-            <p className="font-medium">선택이 완료되었습니다.</p>
-            <ul className="mt-2 space-y-1">
-              {EQUIPMENT_LIST.map((name) => (
-                <li key={name}>
-                  {name}: {summary[name].productName}
-                  {summary[name].quantity > 0 &&
-                    ` · ${summary[name].quantity}개`}
-                  {summary[name].lineTotal != null &&
-                    ` (${summary[name].lineTotal.toLocaleString()}원)`}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 font-semibold">
-              전체 비용: {totalCost.toLocaleString()}원
-            </p>
-          </div>
+          <CostSummaryPanel
+            equipmentList={EQUIPMENT_LIST}
+            summary={summary}
+            totalCost={totalCost}
+          />
         </div>
       ) : (
         <div className="flex flex-1 overflow-hidden">
