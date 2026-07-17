@@ -7,7 +7,8 @@ import {
   autoPlaceHeatDetectors,
 } from "@/lib/heatDetectorPlacement";
 import type { Box } from "@/lib/partitionTree";
-import type { Floor, Structure } from "@/types/floorplan";
+import { RoomType, type Floor, type Structure } from "@/types/floorplan";
+import { HeatDetectorType } from "@/types/heatDetector";
 
 function makeRoom(overrides: Partial<Structure> = {}): Structure {
   return {
@@ -231,5 +232,25 @@ describe("autoPlaceHeatDetectors", () => {
     ]);
     const detectors = autoPlaceHeatDetectors(floor, 20, 1);
     expect(detectors.every((d) => d.roomId === "room-a")).toBe(true);
+  });
+
+  it("uses fixed-temperature detectors for kitchens and boiler rooms, differential elsewhere", () => {
+    const floor = makeFloor([
+      makeRoom({ id: "living", roomType: RoomType.LIVING }),
+      makeRoom({ id: "kitchen", x: 200, roomType: RoomType.KITCHEN }),
+      makeRoom({ id: "boiler", x: 400, roomType: RoomType.BOILER }),
+      makeRoom({ id: "hallway", x: 600, roomType: RoomType.HALLWAY }),
+      makeRoom({ id: "untyped", x: 800 }),
+    ]);
+
+    const detectors = autoPlaceHeatDetectors(floor, 20, 1);
+    const typeByRoom = (roomId: string) =>
+      detectors.find((d) => d.roomId === roomId)?.type;
+
+    expect(typeByRoom("living")).toBe(HeatDetectorType.DIFFERENTIAL);
+    expect(typeByRoom("kitchen")).toBe(HeatDetectorType.FIXED_TEMPERATURE);
+    expect(typeByRoom("boiler")).toBe(HeatDetectorType.FIXED_TEMPERATURE);
+    expect(typeByRoom("hallway")).toBe(HeatDetectorType.DIFFERENTIAL);
+    expect(typeByRoom("untyped")).toBe(HeatDetectorType.DIFFERENTIAL);
   });
 });

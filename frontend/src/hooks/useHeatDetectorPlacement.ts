@@ -4,6 +4,10 @@ import { useCallback, useState } from "react";
 import type { Floor, HeatDetector } from "@/types/floorplan";
 import { DEFAULT_COVERAGE_AREA } from "@/constants/heatDetector";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
+import {
+  HEAT_DETECTOR_TYPE_LABELS,
+  getHeatDetectorTypeForRoom,
+} from "@/constants/heatDetectorTypes";
 import { autoPlaceHeatDetectors } from "@/lib/heatDetectorPlacement";
 import { computeEffectivePixelArea } from "@/lib/partitionTree";
 import { pixelAreaToSquareMeters } from "@/lib/area";
@@ -11,6 +15,7 @@ import { pixelAreaToSquareMeters } from "@/lib/area";
 export type HeatDetectorRoomSummary = {
   roomId: string;
   label: string;
+  typeLabel: string;
   count: number;
 };
 
@@ -63,6 +68,7 @@ export function useHeatDetectorPlacement(
     const byRoom: HeatDetectorRoomSummary[] = rooms.map((room) => ({
       roomId: room.id,
       label: ROOM_TYPE_DEFAULTS[room.roomType ?? DEFAULT_ROOM_TYPE].label,
+      typeLabel: HEAT_DETECTOR_TYPE_LABELS[getHeatDetectorTypeForRoom(room.roomType)],
       count: detectors.filter((detector) => detector.roomId === room.id).length,
     }));
 

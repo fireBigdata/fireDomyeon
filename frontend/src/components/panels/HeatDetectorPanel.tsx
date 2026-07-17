@@ -52,7 +52,7 @@ export default function HeatDetectorPanel({
           <ul className="mt-1 flex flex-col gap-0.5">
             {summary.byRoom.map((room) => (
               <li key={room.roomId}>
-                {room.label}: {room.count}개
+                {room.label} ({room.typeLabel}): {room.count}개
               </li>
             ))}
           </ul>

@@ -3,6 +3,7 @@ import type { HeatDetector } from "@/types/heatDetector";
 import { createId } from "@/lib/id";
 import { pixelAreaToSquareMeters } from "@/lib/area";
 import { computeEffectivePixelArea, computeLeafBoxes, type Box } from "@/lib/partitionTree";
+import { getHeatDetectorTypeForRoom } from "@/constants/heatDetectorTypes";
 
 export type Point = { x: number; y: number };
 export type Grid = { rows: number; columns: number };
@@ -191,6 +192,7 @@ export function autoPlaceHeatDetectors(
 
     const areaM2 = pixelAreaToSquareMeters(computeEffectivePixelArea(room), scale);
     const count = calculateRequiredDetectorCount(areaM2, coverageArea);
+    const type = getHeatDetectorTypeForRoom(room.roomType);
 
     for (const point of calculateRoomDetectorPositions(room, count)) {
       detectors.push({
@@ -200,6 +202,7 @@ export function autoPlaceHeatDetectors(
         x: point.x,
         y: point.y,
         coverageArea,
+        type,
         isAutoPlaced: true,
       });
     }

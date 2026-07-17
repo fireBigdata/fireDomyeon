@@ -6,6 +6,7 @@ StructureType = Literal["room", "corridor", "entrance", "elevator", "stairs"]
 FacilityType = Literal["apartment", "house"]
 RoomType = Literal["LIVING", "KITCHEN", "BOILER", "HALLWAY"]
 EntranceType = Literal["COMMON", "EMERGENCY", "DOOR"]
+HeatDetectorType = Literal["DIFFERENTIAL", "FIXED_TEMPERATURE"]
 PartitionDirection = Literal["vertical", "horizontal"]
 ExitLightCategory = Literal["EXIT", "CORRIDOR", "STAIRS"]
 
@@ -75,6 +76,7 @@ class HeatDetector(BaseModel):
     x: float
     y: float
     coverage_area: float = Field(alias="coverageArea")
+    type: HeatDetectorType
     is_auto_placed: bool = Field(alias="isAutoPlaced")
 
     model_config = {"populate_by_name": True}

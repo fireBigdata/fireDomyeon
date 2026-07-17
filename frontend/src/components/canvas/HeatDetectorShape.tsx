@@ -2,13 +2,21 @@
 
 import { Circle, Group, Rect, Text } from "react-konva";
 import type Konva from "konva";
-import type { HeatDetector } from "@/types/floorplan";
+import { HeatDetectorType, type HeatDetector } from "@/types/floorplan";
+import { HEAT_DETECTOR_TYPE_LABELS } from "@/constants/heatDetectorTypes";
 
 type HeatDetectorShapeProps = {
   detector: HeatDetector;
   roomLabel: string;
   isSelected: boolean;
   onToggleSelect: (id: string | null) => void;
+};
+
+// Fixed-temperature (정온식) detectors get a distinct color/glyph so the
+// two detector types installed side by side stay visually distinguishable.
+const MARKER_BY_TYPE: Record<HeatDetectorType, { fill: string; stroke: string; glyph: string }> = {
+  [HeatDetectorType.DIFFERENTIAL]: { fill: "#f59e0b", stroke: "#b45309", glyph: "차" },
+  [HeatDetectorType.FIXED_TEMPERATURE]: { fill: "#dc2626", stroke: "#991b1b", glyph: "정" },
 };
 
 export default function HeatDetectorShape({
@@ -22,8 +30,11 @@ export default function HeatDetectorShape({
     onToggleSelect(isSelected ? null : detector.id);
   };
 
+  const marker = MARKER_BY_TYPE[detector.type];
+  const typeLabel = HEAT_DETECTOR_TYPE_LABELS[detector.type];
+
   const infoLines = [
-    "열 감지기",
+    `열 감지기 (${typeLabel})`,
     `설치 방: ${roomLabel}`,
     `보호면적: ${detector.coverageArea}m²`,
     `배치 방식: ${detector.isAutoPlaced ? "자동" : "수동"}`,
@@ -33,14 +44,14 @@ export default function HeatDetectorShape({
     <Group x={detector.x} y={detector.y}>
       <Circle
         radius={8}
-        fill="#f59e0b"
-        stroke={isSelected ? "#111827" : "#b45309"}
+        fill={marker.fill}
+        stroke={isSelected ? "#111827" : marker.stroke}
         strokeWidth={isSelected ? 2 : 1}
         onClick={handleToggle}
         onTap={handleToggle}
       />
       <Text
-        text="열"
+        text={marker.glyph}
         width={16}
         height={16}
         offsetX={8}

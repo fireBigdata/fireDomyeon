@@ -5,6 +5,13 @@ export interface HeatDetectorSettings {
   coverageArea: number;
 }
 
+// Detector type. To add a new type: extend this enum and add a matching
+// entry in HEAT_DETECTOR_TYPE_LABELS (constants/heatDetectorTypes.ts).
+export enum HeatDetectorType {
+  DIFFERENTIAL = "DIFFERENTIAL", // 차동식
+  FIXED_TEMPERATURE = "FIXED_TEMPERATURE", // 정온식
+}
+
 export interface HeatDetector {
   id: string;
   floorId: string;
@@ -15,5 +22,6 @@ export interface HeatDetector {
   x: number;
   y: number;
   coverageArea: number;
+  type: HeatDetectorType;
   isAutoPlaced: boolean;
 }

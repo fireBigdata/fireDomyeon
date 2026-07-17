@@ -96,3 +96,4 @@ export type FloorPlanState = {
 };
 
 export type { ExtinguisherPlacement, HeatDetector, ExitLight };
+export { HeatDetectorType } from "@/types/heatDetector";
