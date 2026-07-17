@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { EQUIPMENT_LIST, EQUIPMENT_PRODUCTS } from "@/constants/equipmentProducts";
 import { useEquipmentSelection } from "@/hooks/useEquipmentSelection";
 import { useFloorPlanSummary } from "@/hooks/useFloorPlanSummary";
@@ -22,11 +23,19 @@ export default function EquipmentSelectionPage() {
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
-      <div className="border-b border-gray-200 bg-white px-6 py-6">
-        <h1 className="text-2xl font-semibold text-gray-900">설비 선택</h1>
-        <p className="mt-1 text-gray-500">
-          설비별로 사용할 제품을 선택해주세요.
-        </p>
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">설비 선택</h1>
+          <p className="mt-1 text-gray-500">
+            설비별로 사용할 제품을 선택해주세요.
+          </p>
+        </div>
+        <Link
+          href="/"
+          className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          도면 설계로 이동
+        </Link>
       </div>
 
       {submitted ? (
