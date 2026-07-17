@@ -87,6 +87,8 @@ export type FloorPlanState = {
   floors: Floor[];
   currentFloorId: string;
   selectedStructureId: string | null;
+  /** Set right after a structure is added so its tooltip stays hidden until the user re-selects it. */
+  recentlyCreatedStructureId: string | null;
   selectedPartitionId: string | null;
   selectedHeatDetectorId: string | null;
   selectedExitLightId: string | null;

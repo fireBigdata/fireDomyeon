@@ -56,7 +56,7 @@ export default function HeatDetectorShape({
         // markers commonly sit near the top of the canvas, where an
         // upward tooltip would be clipped by the stage's top edge.
         <Group x={12} y={12} listening={false}>
-          <Rect width={150} height={84} fill="#111827" opacity={0.92} cornerRadius={4} />
+          <Rect width={150} height={84} fill="#111827" opacity={0.85} cornerRadius={4} />
           <Text
             text={infoLines.join("\n")}
             width={150}

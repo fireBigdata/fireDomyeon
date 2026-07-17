@@ -35,6 +35,7 @@ function createInitialState(): FloorPlanState {
     floors: [floor],
     currentFloorId: floor.id,
     selectedStructureId: null,
+    recentlyCreatedStructureId: null,
     selectedPartitionId: null,
     selectedHeatDetectorId: null,
     selectedExitLightId: null,
@@ -93,6 +94,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
               : f
           ),
           selectedStructureId: structure.id,
+          recentlyCreatedStructureId: structure.id,
           selectedPartitionId: null,
         };
       });
@@ -149,6 +151,10 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         ),
         selectedStructureId:
           prev.selectedStructureId === id ? null : prev.selectedStructureId,
+        recentlyCreatedStructureId:
+          prev.recentlyCreatedStructureId === id
+            ? null
+            : prev.recentlyCreatedStructureId,
         selectedPartitionId:
           prev.selectedStructureId === id ? null : prev.selectedPartitionId,
         selectedHeatDetectorId:
@@ -193,6 +199,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setState((prev) => ({
       ...prev,
       selectedStructureId: id,
+      recentlyCreatedStructureId: null,
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
       selectedExitLightId: null,
@@ -204,6 +211,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       setState((prev) => ({
         ...prev,
         selectedStructureId: structureId,
+        recentlyCreatedStructureId: null,
         selectedPartitionId: leafId,
       }));
     },
@@ -334,6 +342,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         floors: [...prev.floors, floor],
         currentFloorId: floor.id,
         selectedStructureId: null,
+        recentlyCreatedStructureId: null,
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
@@ -351,6 +360,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         floors: [...prev.floors, cloned],
         currentFloorId: cloned.id,
         selectedStructureId: null,
+        recentlyCreatedStructureId: null,
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
@@ -369,6 +379,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         floors,
         currentFloorId,
         selectedStructureId: null,
+        recentlyCreatedStructureId: null,
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
@@ -388,6 +399,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       ...prev,
       currentFloorId: floorId,
       selectedStructureId: null,
+      recentlyCreatedStructureId: null,
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
       selectedExitLightId: null,

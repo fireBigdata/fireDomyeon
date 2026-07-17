@@ -31,6 +31,7 @@ type FloorPlanCanvasProps = {
   structures: Structure[];
   scale: number;
   selectedStructureId: string | null;
+  recentlyCreatedStructureId: string | null;
   selectedPartitionId: string | null;
   extinguisherPlacements: ExtinguisherPlacement[];
   heatDetectors: HeatDetector[];
@@ -49,6 +50,7 @@ export default function FloorPlanCanvas({
   structures,
   scale,
   selectedStructureId,
+  recentlyCreatedStructureId,
   selectedPartitionId,
   extinguisherPlacements,
   heatDetectors,
@@ -150,6 +152,7 @@ export default function FloorPlanCanvas({
       structure={structure}
       scale={scale}
       isSelected={structure.id === selectedStructureId}
+      suppressTooltip={structure.id === recentlyCreatedStructureId}
       selectedPartitionId={
         structure.id === selectedStructureId ? selectedPartitionId : null
       }

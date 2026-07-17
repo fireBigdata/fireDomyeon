@@ -8,6 +8,7 @@ import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
 import EntranceTypeSelect from "@/components/panels/EntranceTypeSelect";
 import { ROOT_LEAF_ID, computeEffectivePixelArea, findPartitionNode } from "@/lib/partitionTree";
 import { formatArea, pixelAreaToSquareMeters } from "@/lib/area";
+import { isEntranceStructure } from "@/lib/structureArea";
 
 type StructureInfoPanelProps = {
   structure: Structure | null;
@@ -59,9 +60,12 @@ export default function StructureInfoPanel({
     );
   }
 
-  const area = pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);
   const isRoom = structure.type === "room";
-  const isEntrance = structure.type === "entrance";
+  const isEntrance = isEntranceStructure(structure);
+  // Entrances (공동현관/비상구/문) are openings, not floor space, so they have no area to compute.
+  const area = isEntrance
+    ? null
+    : pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);
   const targetLeafId = selectedPartitionId ?? ROOT_LEAF_ID;
   const selectedNode = selectedPartitionId
     ? findPartitionNode(structure.partitions, selectedPartitionId)
@@ -107,7 +111,7 @@ export default function StructureInfoPanel({
         />
       </label>
 
-      <InfoRow label="면적" value={formatArea(area)} />
+      {area !== null && <InfoRow label="면적" value={formatArea(area)} />}
 
       {isRoom && (
         <>
