@@ -59,7 +59,7 @@ export default function ExitLightShape({
         // HeatDetectorShape's tooltip so it doesn't get clipped by the
         // stage's top edge.
         <Group x={12} y={12} listening={false}>
-          <Rect width={170} height={84} fill="#111827" opacity={0.92} cornerRadius={4} />
+          <Rect width={170} height={84} fill="#111827" opacity={0.85} cornerRadius={4} />
           <Text
             text={infoLines.join("\n")}
             width={170}

@@ -130,6 +130,7 @@ export default function Home() {
             structures={currentFloor.structures}
             scale={state.scale}
             selectedStructureId={state.selectedStructureId}
+            recentlyCreatedStructureId={state.recentlyCreatedStructureId}
             selectedPartitionId={state.selectedPartitionId}
             extinguisherPlacements={currentFloor.extinguisherPlacements}
             heatDetectors={currentFloor.heatDetectors}
