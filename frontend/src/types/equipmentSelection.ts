@@ -47,7 +47,11 @@ export type EquipmentSelectionState = Record<
   EquipmentSelectionValue
 >;
 
-/** 설비별 설치 개수. "설치 안 함"/미선택은 0, 제품 선택 시 기본값 1 */
+/**
+ * 설비별 설치 개수. "설치 안 함"/미선택은 0, 제품 선택 시 기본값은 도면 제작
+ * 페이지에 설치된 해당 설비의 전체 개수 (도면 데이터가 없거나 해당 설비를
+ * 도면에서 추적하지 않으면 1). 사용자가 직접 입력으로 값을 바꿀 수 있음.
+ */
 export type EquipmentQuantityState = Record<EquipmentName, number>;
 
 export type EquipmentSelectionSummary = Record<

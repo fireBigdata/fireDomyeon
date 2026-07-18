@@ -11,9 +11,9 @@ import FloorPlanSummaryPanel from "@/components/equipment/FloorPlanSummaryPanel"
 import CostSummaryPanel from "@/components/equipment/CostSummaryPanel";
 
 export default function EquipmentSelectionPage() {
-  const { selection, quantities, selectProduct, setQuantity, summary, totalCost } =
-    useEquipmentSelection();
   const floorPlanSummary = useFloorPlanSummary();
+  const { selection, quantities, selectProduct, setQuantity, summary, totalCost } =
+    useEquipmentSelection(floorPlanSummary);
   const [submitted, setSubmitted] = useState(false);
   const [activeEquipment, setActiveEquipment] = useState(EQUIPMENT_LIST[0]);
 

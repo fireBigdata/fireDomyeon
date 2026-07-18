@@ -3,6 +3,8 @@
 import { useMemo, useSyncExternalStore } from "react";
 import type { FloorPlanState } from "@/types/floorplan";
 import type { ExitLight, ExitLightCategory } from "@/types/exitLight";
+import type { HeatDetector } from "@/types/heatDetector";
+import { HeatDetectorType } from "@/types/heatDetector";
 import { EXIT_LIGHT_CATEGORY_ORDER } from "@/constants/exitLight";
 import {
   getFloorPlanStateSnapshot,
@@ -12,13 +14,16 @@ import { computeTotalStructurePixelArea } from "@/lib/structureArea";
 import { pixelAreaToSquareMeters } from "@/lib/area";
 
 export type ExitLightCategoryCounts = Record<ExitLightCategory, number>;
+export type HeatDetectorTypeCounts = Record<HeatDetectorType, number>;
 
 export type FloorEquipmentSummary = {
   floorId: string;
   floorName: string;
   extinguisherCount: number;
   heatDetectorCount: number;
+  heatDetectorCountsByType: HeatDetectorTypeCounts;
   exitLightCountsByCategory: ExitLightCategoryCounts;
+  sprinklerHeadCount: number;
 };
 
 export type FloorPlanSummary = {
@@ -26,7 +31,9 @@ export type FloorPlanSummary = {
   totalAreaSqm: number;
   totalExtinguisherCount: number;
   totalHeatDetectorCount: number;
+  totalHeatDetectorCountsByType: HeatDetectorTypeCounts;
   totalExitLightCountsByCategory: ExitLightCategoryCounts;
+  totalSprinklerHeadCount: number;
   byFloor: FloorEquipmentSummary[];
 };
 
@@ -44,6 +51,20 @@ function countExitLightsByCategory(
   return counts;
 }
 
+function countHeatDetectorsByType(
+  heatDetectors: HeatDetector[] | undefined
+): HeatDetectorTypeCounts {
+  const counts = {
+    [HeatDetectorType.DIFFERENTIAL]: 0,
+    [HeatDetectorType.FIXED_TEMPERATURE]: 0,
+  } as HeatDetectorTypeCounts;
+
+  for (const detector of heatDetectors ?? []) {
+    counts[detector.type] = (counts[detector.type] ?? 0) + 1;
+  }
+  return counts;
+}
+
 function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
   const scale = floorPlan.scale ?? 1;
 
@@ -55,7 +76,9 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     // the placement algorithms here.
     extinguisherCount: floor.extinguisherPlacements?.length ?? 0,
     heatDetectorCount: floor.heatDetectors?.length ?? 0,
+    heatDetectorCountsByType: countHeatDetectorsByType(floor.heatDetectors),
     exitLightCountsByCategory: countExitLightsByCategory(floor.exitLights),
+    sprinklerHeadCount: floor.sprinklerHeads?.length ?? 0,
   }));
 
   const totalAreaSqm = floorPlan.floors.reduce(
@@ -79,12 +102,25 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     {} as ExitLightCategoryCounts
   );
 
+  const totalHeatDetectorCountsByType = {
+    [HeatDetectorType.DIFFERENTIAL]: byFloor.reduce(
+      (sum, f) => sum + f.heatDetectorCountsByType[HeatDetectorType.DIFFERENTIAL],
+      0
+    ),
+    [HeatDetectorType.FIXED_TEMPERATURE]: byFloor.reduce(
+      (sum, f) => sum + f.heatDetectorCountsByType[HeatDetectorType.FIXED_TEMPERATURE],
+      0
+    ),
+  } as HeatDetectorTypeCounts;
+
   return {
     floorCount: floorPlan.floors.length,
     totalAreaSqm,
     totalExtinguisherCount: byFloor.reduce((sum, f) => sum + f.extinguisherCount, 0),
     totalHeatDetectorCount: byFloor.reduce((sum, f) => sum + f.heatDetectorCount, 0),
+    totalHeatDetectorCountsByType,
     totalExitLightCountsByCategory,
+    totalSprinklerHeadCount: byFloor.reduce((sum, f) => sum + f.sprinklerHeadCount, 0),
     byFloor,
   };
 }

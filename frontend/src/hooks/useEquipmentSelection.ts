@@ -13,6 +13,8 @@ import type {
   EquipmentSelectionValue,
 } from "@/types/equipmentSelection";
 import { NONE_PRODUCT_ID } from "@/types/equipmentSelection";
+import type { FloorPlanSummary } from "@/hooks/useFloorPlanSummary";
+import { getFloorPlanInstalledCount } from "@/lib/equipmentFloorPlanCounts";
 
 function createInitialSelectionState(): EquipmentSelectionState {
   return EQUIPMENT_LIST.reduce((state, name) => {
@@ -28,7 +30,9 @@ function createInitialQuantityState(): EquipmentQuantityState {
   }, {} as EquipmentQuantityState);
 }
 
-export function useEquipmentSelection() {
+export function useEquipmentSelection(
+  floorPlanSummary: FloorPlanSummary | null = null
+) {
   const [selection, setSelection] = useState<EquipmentSelectionState>(
     createInitialSelectionState
   );
@@ -41,10 +45,13 @@ export function useEquipmentSelection() {
       setSelection((prev) => ({ ...prev, [equipment]: value }));
       setQuantities((prev) => ({
         ...prev,
-        [equipment]: value === null || value === NONE_PRODUCT_ID ? 0 : 1,
+        [equipment]:
+          value === null || value === NONE_PRODUCT_ID
+            ? 0
+            : getFloorPlanInstalledCount(equipment, floorPlanSummary),
       }));
     },
-    []
+    [floorPlanSummary]
   );
 
   const setQuantity = useCallback(
