@@ -30,6 +30,7 @@ function makeFloor(structures: Structure[]): Floor {
     extinguisherPlacements: [],
     heatDetectors: [],
     exitLights: [],
+    sprinklerHeads: [],
   };
 }
 

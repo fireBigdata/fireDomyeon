@@ -10,6 +10,8 @@ import type {
   HeatDetector,
   PartitionDirection,
   RoomType,
+  SprinklerHazardClass,
+  SprinklerHead,
   Structure,
   StructureType,
 } from "@/types/floorplan";
@@ -39,6 +41,7 @@ function createInitialState(): FloorPlanState {
     selectedPartitionId: null,
     selectedHeatDetectorId: null,
     selectedExitLightId: null,
+    selectedSprinklerHeadId: null,
     scale: 1,
   };
 }
@@ -73,6 +76,10 @@ export function useFloorPlanState(initial?: FloorPlanState) {
 
   const setFacilityType = useCallback((facilityType: FacilityType) => {
     setState((prev) => ({ ...prev, facilityType }));
+  }, []);
+
+  const setIsFireResistantStructure = useCallback((isFireResistantStructure: boolean) => {
+    setState((prev) => ({ ...prev, isFireResistantStructure }));
   }, []);
 
   const addStructure = useCallback(
@@ -129,6 +136,11 @@ export function useFloorPlanState(initial?: FloorPlanState) {
           .filter((light) => light.structureId === id)
           .map((light) => light.id)
       );
+      const removedSprinklerHeadIds = new Set(
+        floor.sprinklerHeads
+          .filter((head) => head.roomId === id)
+          .map((head) => head.id)
+      );
 
       return {
         ...prev,
@@ -146,6 +158,9 @@ export function useFloorPlanState(initial?: FloorPlanState) {
                 ),
                 exitLights: f.exitLights.filter(
                   (light) => light.structureId !== id
+                ),
+                sprinklerHeads: f.sprinklerHeads.filter(
+                  (head) => head.roomId !== id
                 ),
               }
         ),
@@ -167,6 +182,11 @@ export function useFloorPlanState(initial?: FloorPlanState) {
           removedExitLightIds.has(prev.selectedExitLightId)
             ? null
             : prev.selectedExitLightId,
+        selectedSprinklerHeadId:
+          prev.selectedSprinklerHeadId &&
+          removedSprinklerHeadIds.has(prev.selectedSprinklerHeadId)
+            ? null
+            : prev.selectedSprinklerHeadId,
       };
     });
   }, []);
@@ -177,6 +197,18 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         ...floor,
         structures: floor.structures.map((structure) =>
           structure.id === id ? { ...structure, roomType } : structure
+        ),
+      }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const setSprinklerHazard = useCallback(
+    (id: string, sprinklerHazard: SprinklerHazardClass) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === id ? { ...structure, sprinklerHazard } : structure
         ),
       }));
     },
@@ -203,6 +235,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
       selectedExitLightId: null,
+      selectedSprinklerHeadId: null,
     }));
   }, []);
 
@@ -346,6 +379,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
+        selectedSprinklerHeadId: null,
       };
     });
   }, []);
@@ -364,6 +398,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
+        selectedSprinklerHeadId: null,
       };
     });
   }, []);
@@ -383,6 +418,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
+        selectedSprinklerHeadId: null,
       };
     });
   }, []);
@@ -403,6 +439,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
       selectedExitLightId: null,
+      selectedSprinklerHeadId: null,
     }));
   }, []);
 
@@ -463,6 +500,26 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     [updateCurrentFloor]
   );
 
+  const selectSprinklerHead = useCallback((id: string | null) => {
+    setState((prev) => ({ ...prev, selectedSprinklerHeadId: id }));
+  }, []);
+
+  const setSprinklerHeads = useCallback(
+    (heads: SprinklerHead[]) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        // Re-placing replaces only the previous auto-placed batch; any
+        // manually placed heads (isAutoPlaced === false) are kept.
+        sprinklerHeads: [
+          ...floor.sprinklerHeads.filter((head) => !head.isAutoPlaced),
+          ...heads,
+        ],
+      }));
+      setState((prev) => ({ ...prev, selectedSprinklerHeadId: null }));
+    },
+    [updateCurrentFloor]
+  );
+
   const loadFloorPlanState = useCallback((next: FloorPlanState) => {
     setState(next);
   }, []);
@@ -491,10 +548,12 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     totalArea,
     setName,
     setFacilityType,
+    setIsFireResistantStructure,
     addStructure,
     updateStructure,
     removeStructure,
     setRoomType,
+    setSprinklerHazard,
     setEntranceType,
     selectStructure,
     selectPartition,
@@ -514,6 +573,8 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setHeatDetectors,
     selectExitLight,
     setExitLights,
+    selectSprinklerHead,
+    setSprinklerHeads,
     loadFloorPlanState,
     ROOT_LEAF_ID,
   };

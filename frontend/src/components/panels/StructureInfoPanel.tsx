@@ -1,9 +1,10 @@
 "use client";
 
-import type { EntranceType, PartitionDirection, RoomType, Structure } from "@/types/floorplan";
+import type { EntranceType, PartitionDirection, RoomType, SprinklerHazardClass, Structure } from "@/types/floorplan";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
 import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
+import { DEFAULT_SPRINKLER_HAZARD, SPRINKLER_HAZARD_LABELS, SPRINKLER_HAZARD_ORDER } from "@/constants/sprinklerHazard";
 import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
 import EntranceTypeSelect from "@/components/panels/EntranceTypeSelect";
 import { ROOT_LEAF_ID, computeEffectivePixelArea, findPartitionNode } from "@/lib/partitionTree";
@@ -16,6 +17,7 @@ type StructureInfoPanelProps = {
   selectedPartitionId: string | null;
   onChange: (id: string, changes: Partial<Structure>) => void;
   onRoomTypeChange: (id: string, roomType: RoomType) => void;
+  onSprinklerHazardChange: (id: string, hazard: SprinklerHazardClass) => void;
   onEntranceTypeChange: (id: string, entranceType: EntranceType) => void;
   onSplitPartition: (
     structureId: string,
@@ -44,6 +46,7 @@ export default function StructureInfoPanel({
   selectedPartitionId,
   onChange,
   onRoomTypeChange,
+  onSprinklerHazardChange,
   onEntranceTypeChange,
   onSplitPartition,
   onResetPartitions,
@@ -121,6 +124,23 @@ export default function StructureInfoPanel({
               value={structure.roomType ?? DEFAULT_ROOM_TYPE}
               onChange={(value) => onRoomTypeChange(structure.id, value)}
             />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-gray-500">스프링클러 위험 등급</span>
+            <select
+              value={structure.sprinklerHazard ?? DEFAULT_SPRINKLER_HAZARD}
+              onChange={(e) =>
+                onSprinklerHazardChange(structure.id, e.target.value as SprinklerHazardClass)
+              }
+              className="w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
+            >
+              {SPRINKLER_HAZARD_ORDER.map((hazard) => (
+                <option key={hazard} value={hazard}>
+                  {SPRINKLER_HAZARD_LABELS[hazard]}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-3">

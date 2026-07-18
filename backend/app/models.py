@@ -9,6 +9,8 @@ EntranceType = Literal["COMMON", "EMERGENCY", "DOOR"]
 HeatDetectorType = Literal["DIFFERENTIAL", "FIXED_TEMPERATURE"]
 PartitionDirection = Literal["vertical", "horizontal"]
 ExitLightCategory = Literal["EXIT", "CORRIDOR", "STAIRS"]
+SprinklerHazardClass = Literal["NONE", "SPECIAL_COMBUSTIBLE", "STAGE"]
+SprinklerHeadType = Literal["STANDARD_CLOSED", "RESIDENTIAL", "OPEN"]
 
 
 class PartitionLeaf(BaseModel):
@@ -50,6 +52,11 @@ class Structure(BaseModel):
     partitions: Optional[PartitionNode] = None
     # Only meaningful when type == "entrance".
     entrance_type: Optional[EntranceType] = Field(default=None, alias="entranceType")
+    # Only meaningful when type == "room". Special sprinkler hazard
+    # classification (NFTC 103 2.2.1); see app's sprinkler rule engine.
+    sprinkler_hazard: Optional[SprinklerHazardClass] = Field(
+        default=None, alias="sprinklerHazard"
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -98,6 +105,24 @@ class ExitLight(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class SprinklerHead(BaseModel):
+    id: str
+    floor_id: str = Field(alias="floorId")
+    room_id: str = Field(alias="roomId")
+    # Set when placed inside a specific partition leaf rather than the whole room.
+    partition_id: Optional[str] = Field(default=None, alias="partitionId")
+    x: float
+    y: float
+    head_type: SprinklerHeadType = Field(alias="headType")
+    is_auto_placed: bool = Field(alias="isAutoPlaced")
+    # Id of the rule (lib/sprinklerRules.ts) applied when placing this head.
+    rule_id: str = Field(alias="ruleId")
+    # The horizontal-distance criterion (R, in meters) applied to this head.
+    horizontal_distance_m: float = Field(alias="horizontalDistanceM")
+
+    model_config = {"populate_by_name": True}
+
+
 class Floor(BaseModel):
     id: str
     name: str
@@ -109,6 +134,9 @@ class Floor(BaseModel):
         default_factory=list, alias="heatDetectors"
     )
     exit_lights: list[ExitLight] = Field(default_factory=list, alias="exitLights")
+    sprinkler_heads: list[SprinklerHead] = Field(
+        default_factory=list, alias="sprinklerHeads"
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -117,6 +145,11 @@ class FloorPlanState(BaseModel):
     id: Optional[str] = None
     name: str
     facility_type: FacilityType = Field(alias="facilityType")
+    # Whether the building's structure is fire-resistant (내화구조); used by
+    # the sprinkler rule engine. None = not yet confirmed by the user.
+    is_fire_resistant_structure: Optional[bool] = Field(
+        default=None, alias="isFireResistantStructure"
+    )
     floors: list[Floor] = Field(default_factory=list)
     current_floor_id: str = Field(alias="currentFloorId")
     selected_structure_id: Optional[str] = Field(
@@ -130,6 +163,9 @@ class FloorPlanState(BaseModel):
     )
     selected_exit_light_id: Optional[str] = Field(
         default=None, alias="selectedExitLightId"
+    )
+    selected_sprinkler_head_id: Optional[str] = Field(
+        default=None, alias="selectedSprinklerHeadId"
     )
     scale: float = 1
 

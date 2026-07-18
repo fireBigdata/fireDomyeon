@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
-import type { ExtinguisherPlacement, HeatDetector, Structure } from "@/types/floorplan";
+import type { ExtinguisherPlacement, HeatDetector, SprinklerHead, Structure } from "@/types/floorplan";
 import type { ExitLight } from "@/types/exitLight";
 import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
@@ -12,6 +12,7 @@ import { getStructureLabel } from "@/lib/structureLabel";
 import StructureShape from "./StructureShape";
 import HeatDetectorShape from "./HeatDetectorShape";
 import ExitLightShape from "./ExitLightShape";
+import SprinklerHeadShape from "./SprinklerHeadShape";
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 600;
@@ -38,11 +39,14 @@ type FloorPlanCanvasProps = {
   selectedHeatDetectorId: string | null;
   exitLights: ExitLight[];
   selectedExitLightId: string | null;
+  sprinklerHeads: SprinklerHead[];
+  selectedSprinklerHeadId: string | null;
   onSelect: (id: string | null) => void;
   onSelectPartition: (structureId: string, leafId: string) => void;
   onResizePartition: (structureId: string, splitId: string, ratio: number) => void;
   onSelectHeatDetector: (id: string | null) => void;
   onSelectExitLight: (id: string | null) => void;
+  onSelectSprinklerHead: (id: string | null) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
 };
 
@@ -57,11 +61,14 @@ export default function FloorPlanCanvas({
   selectedHeatDetectorId,
   exitLights,
   selectedExitLightId,
+  sprinklerHeads,
+  selectedSprinklerHeadId,
   onSelect,
   onSelectPartition,
   onResizePartition,
   onSelectHeatDetector,
   onSelectExitLight,
+  onSelectSprinklerHead,
   onChange,
 }: FloorPlanCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -209,6 +216,7 @@ export default function FloorPlanCanvas({
             onSelect(null);
             onSelectHeatDetector(null);
             onSelectExitLight(null);
+            onSelectSprinklerHead(null);
           }
         }}
       >
@@ -264,6 +272,14 @@ export default function FloorPlanCanvas({
             />
           );
         })}
+        {sprinklerHeads.map((head) => (
+          <SprinklerHeadShape
+            key={head.id}
+            head={head}
+            isSelected={head.id === selectedSprinklerHeadId}
+            onToggleSelect={onSelectSprinklerHead}
+          />
+        ))}
         <Transformer
           ref={transformerRef}
           rotateEnabled={false}

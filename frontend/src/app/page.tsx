@@ -6,6 +6,7 @@ import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
 import { useExitLightPlacement } from "@/hooks/useExitLightPlacement";
+import { useSprinklerPlacement } from "@/hooks/useSprinklerPlacement";
 import { saveFloorPlanStateToStorage } from "@/lib/floorPlanStorage";
 import TopBar from "@/components/layout/TopBar";
 import FloorBar from "@/components/layout/FloorBar";
@@ -22,10 +23,12 @@ export default function Home() {
     totalArea,
     setName,
     setFacilityType,
+    setIsFireResistantStructure,
     addStructure,
     updateStructure,
     removeStructure,
     setRoomType,
+    setSprinklerHazard,
     setEntranceType,
     selectStructure,
     selectPartition,
@@ -45,6 +48,8 @@ export default function Home() {
     setHeatDetectors,
     selectExitLight,
     setExitLights,
+    selectSprinklerHead,
+    setSprinklerHeads,
   } = useFloorPlanState();
 
   const saveFloorPlan = useSaveFloorPlan();
@@ -80,6 +85,14 @@ export default function Home() {
 
   const { summary: exitLightSummary, autoPlace: autoPlaceExitLights } =
     useExitLightPlacement(currentFloor, state.scale, setExitLights);
+
+  const { summary: sprinklerSummary, autoPlace: autoPlaceSprinklers } = useSprinklerPlacement(
+    currentFloor,
+    state.facilityType,
+    state.isFireResistantStructure,
+    state.scale,
+    setSprinklerHeads
+  );
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-gray-50">
@@ -119,6 +132,10 @@ export default function Home() {
           heatDetectorSummary={heatDetectorSummary}
           onAutoPlaceExitLights={autoPlaceExitLights}
           exitLightSummary={exitLightSummary}
+          isFireResistantStructure={state.isFireResistantStructure ?? false}
+          onFireResistantStructureChange={setIsFireResistantStructure}
+          onAutoPlaceSprinklers={autoPlaceSprinklers}
+          sprinklerSummary={sprinklerSummary}
         />
 
         <main className="flex flex-1 flex-col items-center gap-4 overflow-auto p-6">
@@ -137,11 +154,14 @@ export default function Home() {
             selectedHeatDetectorId={state.selectedHeatDetectorId}
             exitLights={currentFloor.exitLights}
             selectedExitLightId={state.selectedExitLightId}
+            sprinklerHeads={currentFloor.sprinklerHeads}
+            selectedSprinklerHeadId={state.selectedSprinklerHeadId}
             onSelect={selectStructure}
             onSelectPartition={selectPartition}
             onResizePartition={resizePartition}
             onSelectHeatDetector={selectHeatDetector}
             onSelectExitLight={selectExitLight}
+            onSelectSprinklerHead={selectSprinklerHead}
             onChange={updateStructure}
           />
         </main>
@@ -152,6 +172,7 @@ export default function Home() {
           selectedPartitionId={state.selectedPartitionId}
           onChange={updateStructure}
           onRoomTypeChange={setRoomType}
+          onSprinklerHazardChange={setSprinklerHazard}
           onEntranceTypeChange={setEntranceType}
           onSplitPartition={splitPartition}
           onResetPartitions={resetPartitions}

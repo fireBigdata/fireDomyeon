@@ -4,11 +4,13 @@ import type { EntranceType, FacilityType, StructureType, RoomType } from "@/type
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
 import type { ExitLightSummary } from "@/lib/exitLightPlacement";
+import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar from "@/components/panels/StructureToolbar";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 import ExitLightPanel from "@/components/panels/ExitLightPanel";
+import SprinklerPanel from "@/components/panels/SprinklerPanel";
 
 type LeftPanelProps = {
   facilityType: FacilityType;
@@ -32,6 +34,10 @@ type LeftPanelProps = {
   heatDetectorSummary: HeatDetectorSummary | null;
   onAutoPlaceExitLights: () => void;
   exitLightSummary: ExitLightSummary | null;
+  isFireResistantStructure: boolean;
+  onFireResistantStructureChange: (value: boolean) => void;
+  onAutoPlaceSprinklers: () => void;
+  sprinklerSummary: SprinklerSummary | null;
 };
 
 export default function LeftPanel({
@@ -52,6 +58,10 @@ export default function LeftPanel({
   heatDetectorSummary,
   onAutoPlaceExitLights,
   exitLightSummary,
+  isFireResistantStructure,
+  onFireResistantStructureChange,
+  onAutoPlaceSprinklers,
+  sprinklerSummary,
 }: LeftPanelProps) {
   return (
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
@@ -75,6 +85,12 @@ export default function LeftPanel({
         summary={heatDetectorSummary}
       />
       <ExitLightPanel onAutoPlace={onAutoPlaceExitLights} summary={exitLightSummary} />
+      <SprinklerPanel
+        isFireResistantStructure={isFireResistantStructure}
+        onFireResistantChange={onFireResistantStructureChange}
+        onAutoPlace={onAutoPlaceSprinklers}
+        summary={sprinklerSummary}
+      />
     </aside>
   );
 }

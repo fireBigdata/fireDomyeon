@@ -1,6 +1,8 @@
 import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { HeatDetector } from "@/types/heatDetector";
 import type { ExitLight } from "@/types/exitLight";
+import { SprinklerHazardClass } from "@/types/sprinkler";
+import type { SprinklerHead } from "@/types/sprinkler";
 
 export type StructureType =
   | "room"
@@ -69,6 +71,12 @@ export type Structure = {
   partitions?: PartitionNode;
   /** Only meaningful when type === "entrance". */
   entranceType?: EntranceType;
+  /**
+   * Only meaningful when type === "room". Special sprinkler hazard
+   * classification (NFTC 103 2.2.1) for this room; undefined/NONE uses the
+   * default residential/general rule for the room. See lib/sprinklerRules.ts.
+   */
+  sprinklerHazard?: SprinklerHazardClass;
 };
 
 export type Floor = {
@@ -78,12 +86,21 @@ export type Floor = {
   extinguisherPlacements: ExtinguisherPlacement[];
   heatDetectors: HeatDetector[];
   exitLights: ExitLight[];
+  sprinklerHeads: SprinklerHead[];
 };
 
 export type FloorPlanState = {
   id?: string;
   name: string;
   facilityType: FacilityType;
+  /**
+   * Whether the building's structure is fire-resistant (내화구조), used by
+   * the sprinkler rule engine to pick between the 2.1m/2.3m horizontal
+   * distance criteria (NFTC 103 2.2.1). Undefined = not yet confirmed by the
+   * user; the engine falls back to the safer (smaller-radius) 2.1m rule and
+   * flags the result for review. See lib/sprinklerRules.ts.
+   */
+  isFireResistantStructure?: boolean;
   floors: Floor[];
   currentFloorId: string;
   selectedStructureId: string | null;
@@ -92,8 +109,10 @@ export type FloorPlanState = {
   selectedPartitionId: string | null;
   selectedHeatDetectorId: string | null;
   selectedExitLightId: string | null;
+  selectedSprinklerHeadId: string | null;
   scale: number;
 };
 
-export type { ExtinguisherPlacement, HeatDetector, ExitLight };
+export type { ExtinguisherPlacement, HeatDetector, ExitLight, SprinklerHead };
 export { HeatDetectorType } from "@/types/heatDetector";
+export { SprinklerHazardClass, SprinklerHeadType, SprinklerComplianceStatus } from "@/types/sprinkler";
