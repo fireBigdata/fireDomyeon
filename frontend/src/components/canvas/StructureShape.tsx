@@ -23,6 +23,9 @@ type StructureShapeProps = {
   onResizePartition: (structureId: string, splitId: string, ratio: number) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
   registerNode: (id: string, node: Konva.Group | null) => void;
+  /** True while the canvas is in draw-a-new-structure mode, so existing
+   * structures don't intercept the mousedown that starts the drag rectangle. */
+  interactionDisabled?: boolean;
 };
 
 function StairsLines({ width, height }: { width: number; height: number }) {
@@ -57,6 +60,7 @@ export default function StructureShape({
   onResizePartition,
   onChange,
   registerNode,
+  interactionDisabled,
 }: StructureShapeProps) {
   const contentRef = useRef<Konva.Group>(null);
   const defaults = STRUCTURE_DEFAULTS[structure.type];
@@ -99,7 +103,8 @@ export default function StructureShape({
       x={structure.x}
       y={structure.y}
       rotation={structure.rotation ?? 0}
-      draggable
+      draggable={!interactionDisabled}
+      listening={!interactionDisabled}
       onClick={() => onSelect(structure.id)}
       onTap={() => onSelect(structure.id)}
       onDragEnd={(e) => {

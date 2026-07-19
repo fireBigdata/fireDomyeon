@@ -51,7 +51,7 @@ describe("calculateRequiredPassageLightCount", () => {
 });
 
 describe("calculateExitLightPlacements", () => {
-  it("places one light per entrance, regardless of entrance kind", () => {
+  it("places one light per 공동현관/비상구 entrance, but not at 문", () => {
     const structures = [
       makeStructure({ id: "e1", type: "entrance", entranceType: EntranceType.COMMON, x: 0, y: 0, width: 60, height: 20 }),
       makeStructure({ id: "e2", type: "entrance", entranceType: EntranceType.EMERGENCY, x: 200, y: 0, width: 60, height: 20 }),
@@ -61,9 +61,9 @@ describe("calculateExitLightPlacements", () => {
 
     const lights = calculateExitLightPlacements(floor);
 
-    expect(lights).toHaveLength(3);
+    expect(lights).toHaveLength(2);
     expect(lights.every((l) => l.category === "EXIT")).toBe(true);
-    expect(new Set(lights.map((l) => l.structureId))).toEqual(new Set(["e1", "e2", "e3"]));
+    expect(new Set(lights.map((l) => l.structureId))).toEqual(new Set(["e1", "e2"]));
   });
 
   it("ignores non-entrance structures", () => {
@@ -72,7 +72,15 @@ describe("calculateExitLightPlacements", () => {
   });
 
   it("places the light at the entrance's own center", () => {
-    const entrance = makeStructure({ id: "e1", type: "entrance", x: 100, y: 200, width: 60, height: 20 });
+    const entrance = makeStructure({
+      id: "e1",
+      type: "entrance",
+      entranceType: EntranceType.COMMON,
+      x: 100,
+      y: 200,
+      width: 60,
+      height: 20,
+    });
     const floor = makeFloor([entrance]);
     const [light] = calculateExitLightPlacements(floor);
     expect(light.x).toBe(130);
@@ -161,7 +169,7 @@ describe("summarizeExitLights", () => {
 describe("autoPlaceExitLights", () => {
   it("combines every category and never places lights inside rooms", () => {
     const floor = makeFloor([
-      makeStructure({ id: "entrance-1", type: "entrance", x: 0, y: 0, width: 60, height: 20 }),
+      makeStructure({ id: "entrance-1", type: "entrance", entranceType: EntranceType.COMMON, x: 0, y: 0, width: 60, height: 20 }),
       makeStructure({ id: "corridor-1", type: "corridor", x: 0, y: 100, width: 220, height: 50 }),
       makeStructure({ id: "living-1", type: "room", roomType: RoomType.LIVING, x: 0, y: 200, width: 120, height: 100 }),
       makeStructure({ id: "kitchen-1", type: "room", roomType: RoomType.KITCHEN, x: 200, y: 200, width: 120, height: 100 }),

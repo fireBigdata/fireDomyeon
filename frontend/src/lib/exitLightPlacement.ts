@@ -1,4 +1,5 @@
 import type { Floor, Structure } from "@/types/floorplan";
+import { EntranceType } from "@/types/floorplan";
 import type { ExitLight, ExitLightCategory } from "@/types/exitLight";
 import type { Point } from "@/lib/heatDetectorPlacement";
 import { createId } from "@/lib/id";
@@ -177,10 +178,14 @@ export function calculatePassageLightPlacements(
   return lights;
 }
 
-/** 피난구유도등: one at every entrance (공동현관/비상구/문 모두 피난구로 간주). */
+/** 피난구유도등: one at every 공동현관/비상구 entrance (문은 피난구로 보지 않음). */
 export function calculateExitLightPlacements(floor: Floor): ExitLight[] {
   return floor.structures
-    .filter((s) => s.type === "entrance")
+    .filter(
+      (s) =>
+        s.type === "entrance" &&
+        (s.entranceType === EntranceType.COMMON || s.entranceType === EntranceType.EMERGENCY)
+    )
     .map((entrance) =>
       buildLight(
         floor.id,

@@ -240,7 +240,7 @@ describe("autoPlaceHeatDetectors", () => {
       makeRoom({ id: "living", roomType: RoomType.LIVING }),
       makeRoom({ id: "kitchen", x: 200, roomType: RoomType.KITCHEN }),
       makeRoom({ id: "boiler", x: 400, roomType: RoomType.BOILER }),
-      makeRoom({ id: "hallway", x: 600, roomType: RoomType.HALLWAY }),
+      makeRoom({ id: "bedroom", x: 600, roomType: RoomType.BEDROOM }),
       makeRoom({ id: "untyped", x: 800 }),
     ]);
 
@@ -251,7 +251,7 @@ describe("autoPlaceHeatDetectors", () => {
     expect(typeByRoom("living")).toBe(HeatDetectorType.DIFFERENTIAL);
     expect(typeByRoom("kitchen")).toBe(HeatDetectorType.FIXED_TEMPERATURE);
     expect(typeByRoom("boiler")).toBe(HeatDetectorType.FIXED_TEMPERATURE);
-    expect(typeByRoom("hallway")).toBe(HeatDetectorType.DIFFERENTIAL);
+    expect(typeByRoom("bedroom")).toBe(HeatDetectorType.DIFFERENTIAL);
     expect(typeByRoom("untyped")).toBe(HeatDetectorType.DIFFERENTIAL);
   });
 });

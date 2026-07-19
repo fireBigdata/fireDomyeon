@@ -1,83 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { EntranceType, RoomType, type StructureType } from "@/types/floorplan";
-import {
-  STRUCTURE_DEFAULTS,
-  STRUCTURE_TYPE_ORDER,
-} from "@/constants/structureDefaults";
-import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
-import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
-import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
-import EntranceTypeSelect from "@/components/panels/EntranceTypeSelect";
+export type StructureCategory = "structure" | "entrance";
 
 type StructureToolbarProps = {
-  onAdd: (
-    type: StructureType,
-    roomType?: RoomType,
-    entranceType?: EntranceType
-  ) => void;
+  pendingCategory: StructureCategory | null;
+  onArm: (category: StructureCategory) => void;
 };
 
-const PLAIN_STRUCTURE_TYPES = STRUCTURE_TYPE_ORDER.filter(
-  (type) => type !== "room" && type !== "entrance"
-);
+const armedClass = "border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-50";
 
-export default function StructureToolbar({ onAdd }: StructureToolbarProps) {
-  const [roomType, setRoomType] = useState<RoomType>(DEFAULT_ROOM_TYPE);
-  const [entranceType, setEntranceType] = useState<EntranceType>(DEFAULT_ENTRANCE_TYPE);
-
+export default function StructureToolbar({ pendingCategory, onArm }: StructureToolbarProps) {
   return (
     <div>
       <label className="mb-1 block text-xs font-medium text-gray-500">
         구조물 추가
       </label>
+      {pendingCategory && (
+        <p className="mb-1.5 text-xs text-blue-600">
+          도면을 드래그해서 구조물을 그려주세요 (Esc: 취소)
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
-        <div className="flex gap-1.5">
-          <RoomTypeSelect
-            value={roomType}
-            onChange={setRoomType}
-            className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => onAdd("room", roomType)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
-          >
-            + 방
-          </button>
-        </div>
-        <div className="flex gap-1.5">
-          <EntranceTypeSelect
-            value={entranceType}
-            onChange={setEntranceType}
-            className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => onAdd("entrance", undefined, entranceType)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
-          >
-            + 출입구
-          </button>
-        </div>
-        {PLAIN_STRUCTURE_TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => onAdd(type)}
-            className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-left text-sm hover:bg-gray-50"
-          >
-            <span
-              className="inline-block h-3 w-3 rounded-sm border"
-              style={{
-                backgroundColor: STRUCTURE_DEFAULTS[type].fill,
-                borderColor: STRUCTURE_DEFAULTS[type].stroke,
-              }}
-            />
-            {STRUCTURE_DEFAULTS[type].label}
-          </button>
-        ))}
+        <button
+          type="button"
+          onClick={() => onArm("structure")}
+          className={`rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 ${
+            pendingCategory === "structure" ? armedClass : "border-gray-300 bg-white"
+          }`}
+        >
+          + 구조물 추가
+        </button>
+        <button
+          type="button"
+          onClick={() => onArm("entrance")}
+          className={`rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 ${
+            pendingCategory === "entrance" ? armedClass : "border-gray-300 bg-white"
+          }`}
+        >
+          + 출입구 추가
+        </button>
       </div>
     </div>
   );

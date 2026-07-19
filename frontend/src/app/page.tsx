@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
@@ -14,6 +14,9 @@ import LeftPanel from "@/components/layout/LeftPanel";
 import RightPanel from "@/components/layout/RightPanel";
 import AreaSummary from "@/components/panels/AreaSummary";
 import DynamicFloorPlanCanvas from "@/components/canvas/DynamicFloorPlanCanvas";
+import type { StructureCategory } from "@/components/panels/StructureToolbar";
+import type { EntranceType, RoomType, StructureType } from "@/types/floorplan";
+import type { StructureRect } from "@/lib/structureFactory";
 
 export default function Home() {
   const {
@@ -51,6 +54,23 @@ export default function Home() {
     selectSprinklerHead,
     setSprinklerHeads,
   } = useFloorPlanState();
+
+  const [pendingCategory, setPendingCategory] = useState<StructureCategory | null>(null);
+
+  const handleArmStructure = (category: StructureCategory) => {
+    setPendingCategory((prev) => (prev === category ? null : category));
+    selectStructure(null);
+  };
+
+  const handleConfirmStructure = (
+    rect: StructureRect,
+    type: StructureType,
+    roomType?: RoomType,
+    entranceType?: EntranceType
+  ) => {
+    addStructure(type, rect, roomType, entranceType);
+    setPendingCategory(null);
+  };
 
   const saveFloorPlan = useSaveFloorPlan();
 
@@ -117,7 +137,8 @@ export default function Home() {
         <LeftPanel
           facilityType={state.facilityType}
           onFacilityTypeChange={setFacilityType}
-          onAddStructure={addStructure}
+          pendingCategory={pendingCategory}
+          onArmStructure={handleArmStructure}
           extinguisherTypeId={extinguisherTypeId}
           onExtinguisherTypeChange={setExtinguisherTypeId}
           extinguisherAbilityUnitsInput={extinguisherAbilityUnitsInput}
@@ -163,6 +184,9 @@ export default function Home() {
             onSelectExitLight={selectExitLight}
             onSelectSprinklerHead={selectSprinklerHead}
             onChange={updateStructure}
+            pendingCategory={pendingCategory}
+            onConfirmStructure={handleConfirmStructure}
+            onCancelPendingStructure={() => setPendingCategory(null)}
           />
         </main>
 

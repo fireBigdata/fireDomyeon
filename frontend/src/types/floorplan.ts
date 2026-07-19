@@ -16,10 +16,10 @@ export type FacilityType = "apartment" | "house";
 // Room usage type. To add a new usage: extend this enum and add a matching
 // entry in ROOM_TYPE_DEFAULTS / ROOM_TYPE_ORDER (constants/roomTypes.ts).
 export enum RoomType {
+  BEDROOM = "BEDROOM",
   LIVING = "LIVING",
   KITCHEN = "KITCHEN",
   BOILER = "BOILER",
-  HALLWAY = "HALLWAY",
 }
 
 // Entrance usage type. To add a new kind: extend this enum and add a

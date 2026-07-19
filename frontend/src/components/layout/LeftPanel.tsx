@@ -1,12 +1,12 @@
 "use client";
 
-import type { EntranceType, FacilityType, StructureType, RoomType } from "@/types/floorplan";
+import type { FacilityType } from "@/types/floorplan";
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
 import type { ExitLightSummary } from "@/lib/exitLightPlacement";
 import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
-import StructureToolbar from "@/components/panels/StructureToolbar";
+import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 import ExitLightPanel from "@/components/panels/ExitLightPanel";
@@ -15,11 +15,8 @@ import SprinklerPanel from "@/components/panels/SprinklerPanel";
 type LeftPanelProps = {
   facilityType: FacilityType;
   onFacilityTypeChange: (value: FacilityType) => void;
-  onAddStructure: (
-    type: StructureType,
-    roomType?: RoomType,
-    entranceType?: EntranceType
-  ) => void;
+  pendingCategory: StructureCategory | null;
+  onArmStructure: (category: StructureCategory) => void;
   extinguisherTypeId: string;
   onExtinguisherTypeChange: (id: string) => void;
   extinguisherAbilityUnitsInput: string;
@@ -43,7 +40,8 @@ type LeftPanelProps = {
 export default function LeftPanel({
   facilityType,
   onFacilityTypeChange,
-  onAddStructure,
+  pendingCategory,
+  onArmStructure,
   extinguisherTypeId,
   onExtinguisherTypeChange,
   extinguisherAbilityUnitsInput,
@@ -66,7 +64,7 @@ export default function LeftPanel({
   return (
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
       <FacilityTypeSelect value={facilityType} onChange={onFacilityTypeChange} />
-      <StructureToolbar onAdd={onAddStructure} />
+      <StructureToolbar pendingCategory={pendingCategory} onArm={onArmStructure} />
       <ExtinguisherPanel
         facilityType={facilityType}
         typeId={extinguisherTypeId}

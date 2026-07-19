@@ -1,7 +1,6 @@
 "use client";
 
 import type { EntranceType, PartitionDirection, RoomType, SprinklerHazardClass, Structure } from "@/types/floorplan";
-import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
 import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
 import { DEFAULT_SPRINKLER_HAZARD, SPRINKLER_HAZARD_LABELS, SPRINKLER_HAZARD_ORDER } from "@/constants/sprinklerHazard";
@@ -10,6 +9,7 @@ import EntranceTypeSelect from "@/components/panels/EntranceTypeSelect";
 import { ROOT_LEAF_ID, computeEffectivePixelArea, findPartitionNode } from "@/lib/partitionTree";
 import { formatArea, pixelAreaToSquareMeters } from "@/lib/area";
 import { isEntranceStructure } from "@/lib/structureArea";
+import { getStructureLabel } from "@/lib/structureLabel";
 
 type StructureInfoPanelProps = {
   structure: Structure | null;
@@ -78,7 +78,7 @@ export default function StructureInfoPanel({
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-gray-800">
-        {STRUCTURE_DEFAULTS[structure.type].label}
+        {getStructureLabel(structure)}
       </h3>
 
       <InfoRow label="x" value={structure.x.toFixed(0)} />

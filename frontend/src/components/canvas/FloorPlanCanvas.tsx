@@ -3,22 +3,76 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
-import type { ExtinguisherPlacement, HeatDetector, SprinklerHead, Structure } from "@/types/floorplan";
+import type {
+  EntranceType,
+  ExtinguisherPlacement,
+  HeatDetector,
+  RoomType,
+  SprinklerHead,
+  Structure,
+  StructureType,
+} from "@/types/floorplan";
 import type { ExitLight } from "@/types/exitLight";
+import type { StructureRect } from "@/lib/structureFactory";
+import type { StructureCategory } from "@/components/panels/StructureToolbar";
 import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
-import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
+import { STRUCTURE_DEFAULTS, STRUCTURE_TYPE_ORDER } from "@/constants/structureDefaults";
+import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS, ROOM_TYPE_ORDER } from "@/constants/roomTypes";
+import { ENTRANCE_TYPE_DEFAULTS, ENTRANCE_TYPE_ORDER } from "@/constants/entranceTypes";
 import { isDoorStructure } from "@/lib/structureArea";
 import { getStructureLabel } from "@/lib/structureLabel";
 import StructureShape from "./StructureShape";
 import HeatDetectorShape from "./HeatDetectorShape";
 import ExitLightShape from "./ExitLightShape";
 import SprinklerHeadShape from "./SprinklerHeadShape";
+import StructureTypeChoiceOverlay from "./StructureTypeChoiceOverlay";
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 600;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 1.15;
+// Below this drag distance (in content px), a click-without-drag falls back
+// to a generic default size anchored at the click point (the specific type,
+// and so its real default size, isn't chosen until after the choice overlay).
+const MIN_DRAG_TO_DRAW = 6;
+
+// "구조물 추가"의 용도 선택지: 방 계열은 RoomType까지 곧바로 세분화해서 보여주고
+// (선택 즉시 room + 해당 roomType으로 생성), 복도/엘리베이터/계단은 구조물 종류
+// 자체를 고른다. 출입구는 별도 버튼이라 여기서 제외.
+const NON_ROOM_STRUCTURE_TYPES: StructureType[] = STRUCTURE_TYPE_ORDER.filter(
+  (type) => type !== "entrance" && type !== "room"
+);
+
+type StructureCategoryChoice = {
+  value: string;
+  label: string;
+  fill: string;
+  stroke: string;
+  structureType: StructureType;
+  roomType?: RoomType;
+};
+
+const STRUCTURE_CATEGORY_CHOICES: StructureCategoryChoice[] = [
+  ...ROOM_TYPE_ORDER.map((roomType) => ({
+    value: roomType as string,
+    label: ROOM_TYPE_DEFAULTS[roomType].label,
+    fill: ROOM_TYPE_DEFAULTS[roomType].fill,
+    stroke: ROOM_TYPE_DEFAULTS[roomType].stroke,
+    structureType: "room" as StructureType,
+    roomType,
+  })),
+  ...NON_ROOM_STRUCTURE_TYPES.map((type) => ({
+    value: type as string,
+    label: STRUCTURE_DEFAULTS[type].label,
+    fill: STRUCTURE_DEFAULTS[type].fill,
+    stroke: STRUCTURE_DEFAULTS[type].stroke,
+    structureType: type,
+  })),
+];
+
+const OVERLAY_WIDTH = 176;
+const OVERLAY_MARGIN = 8;
 
 type ViewTransform = { scale: number; x: number; y: number };
 
@@ -48,6 +102,16 @@ type FloorPlanCanvasProps = {
   onSelectExitLight: (id: string | null) => void;
   onSelectSprinklerHead: (id: string | null) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
+  /** Non-null while "구조물 추가"/"출입구 추가" is armed: the canvas switches
+   * from pan/select to draw-a-rectangle mode for this category. */
+  pendingCategory: StructureCategory | null;
+  onConfirmStructure: (
+    rect: StructureRect,
+    type: StructureType,
+    roomType?: RoomType,
+    entranceType?: EntranceType
+  ) => void;
+  onCancelPendingStructure: () => void;
 };
 
 export default function FloorPlanCanvas({
@@ -70,11 +134,19 @@ export default function FloorPlanCanvas({
   onSelectExitLight,
   onSelectSprinklerHead,
   onChange,
+  pendingCategory,
+  onConfirmStructure,
+  onCancelPendingStructure,
 }: FloorPlanCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const nodesRef = useRef<Map<string, Konva.Group>>(new Map());
   const [view, setView] = useState<ViewTransform>(INITIAL_VIEW);
+  const drawStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [drawRect, setDrawRect] = useState<StructureRect | null>(null);
+  // True once mouseup finalizes the dragged rect: the rect stops updating
+  // and the "용도 선택" overlay takes over until the user picks a type (or cancels).
+  const [awaitingChoice, setAwaitingChoice] = useState(false);
 
   const registerNode = useCallback((id: string, node: Konva.Group | null) => {
     if (node) {
@@ -131,6 +203,104 @@ export default function FloorPlanCanvas({
     setView((prev) => ({ ...prev, x: e.target.x(), y: e.target.y() }));
   }, []);
 
+  // Same formula as zoomAtPoint's contentPoint: undoes the stage's
+  // scale/translate so a pointer position lands in structure (x/y) space.
+  const toContentPoint = useCallback(
+    (point: { x: number; y: number }) => ({
+      x: (point.x - view.x) / view.scale,
+      y: (point.y - view.y) / view.scale,
+    }),
+    [view]
+  );
+
+  const handleDrawMouseDown = useCallback(() => {
+    if (awaitingChoice) return;
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!pointer) return;
+    const point = toContentPoint(pointer);
+    drawStartRef.current = point;
+    setDrawRect({ x: point.x, y: point.y, width: 0, height: 0 });
+  }, [awaitingChoice, toContentPoint]);
+
+  const handleDrawMouseMove = useCallback(() => {
+    if (awaitingChoice) return;
+    const start = drawStartRef.current;
+    if (!start) return;
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!pointer) return;
+    const point = toContentPoint(pointer);
+    setDrawRect({
+      x: Math.min(start.x, point.x),
+      y: Math.min(start.y, point.y),
+      width: Math.abs(point.x - start.x),
+      height: Math.abs(point.y - start.y),
+    });
+  }, [awaitingChoice, toContentPoint]);
+
+  const handleDrawMouseUp = useCallback(() => {
+    if (awaitingChoice) return;
+    const start = drawStartRef.current;
+    const rect = drawRect;
+    drawStartRef.current = null;
+    if (!start || !rect || !pendingCategory) {
+      setDrawRect(null);
+      return;
+    }
+
+    if (rect.width < MIN_DRAG_TO_DRAW && rect.height < MIN_DRAG_TO_DRAW) {
+      // Plain click, no meaningful drag: fall back to a generic default size
+      // anchored at the click point (the exact type isn't known until the
+      // choice overlay below is answered).
+      const defaults =
+        pendingCategory === "entrance" ? STRUCTURE_DEFAULTS.entrance : STRUCTURE_DEFAULTS.room;
+      setDrawRect({ x: start.x, y: start.y, width: defaults.width, height: defaults.height });
+    }
+    setAwaitingChoice(true);
+  }, [awaitingChoice, drawRect, pendingCategory]);
+
+  const handleChooseType = useCallback(
+    (value: string) => {
+      if (!drawRect) return;
+      if (pendingCategory === "entrance") {
+        onConfirmStructure(drawRect, "entrance", undefined, value as EntranceType);
+      } else {
+        const choice = STRUCTURE_CATEGORY_CHOICES.find((option) => option.value === value);
+        if (!choice) return;
+        onConfirmStructure(drawRect, choice.structureType, choice.roomType);
+      }
+      drawStartRef.current = null;
+      setDrawRect(null);
+      setAwaitingChoice(false);
+    },
+    [drawRect, pendingCategory, onConfirmStructure]
+  );
+
+  const handleCancelDraw = useCallback(() => {
+    drawStartRef.current = null;
+    setDrawRect(null);
+    setAwaitingChoice(false);
+    onCancelPendingStructure();
+  }, [onCancelPendingStructure]);
+
+  // Fallback for a mouseup that lands outside the canvas (Konva's own
+  // mouseup prop only fires while the pointer is over the stage container).
+  // Stops listening once awaitingChoice flips on, so a click on the choice
+  // overlay's own buttons (also a mouseup) doesn't re-trigger this.
+  useEffect(() => {
+    if (!drawRect || awaitingChoice) return;
+    window.addEventListener("mouseup", handleDrawMouseUp);
+    return () => window.removeEventListener("mouseup", handleDrawMouseUp);
+  }, [drawRect, awaitingChoice, handleDrawMouseUp]);
+
+  useEffect(() => {
+    if (!pendingCategory) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleCancelDraw();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pendingCategory, handleCancelDraw]);
+
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
@@ -168,8 +338,42 @@ export default function FloorPlanCanvas({
       onResizePartition={onResizePartition}
       onChange={onChange}
       registerNode={registerNode}
+      interactionDisabled={!!pendingCategory}
     />
   );
+
+  const choiceOptions = !pendingCategory
+    ? []
+    : pendingCategory === "entrance"
+      ? ENTRANCE_TYPE_ORDER.map((type) => ({
+          value: type as string,
+          label: ENTRANCE_TYPE_DEFAULTS[type].label,
+          fill: ENTRANCE_TYPE_DEFAULTS[type].fill,
+          stroke: ENTRANCE_TYPE_DEFAULTS[type].stroke,
+        }))
+      : STRUCTURE_CATEGORY_CHOICES;
+
+  const overlayScreenRect = drawRect
+    ? {
+        x: drawRect.x * view.scale + view.x,
+        y: drawRect.y * view.scale + view.y,
+        width: drawRect.width * view.scale,
+        height: drawRect.height * view.scale,
+      }
+    : null;
+  const overlayHeight = 44 + choiceOptions.length * 34;
+  const overlayLeft = overlayScreenRect
+    ? Math.min(
+        Math.max(overlayScreenRect.x + overlayScreenRect.width + OVERLAY_MARGIN, OVERLAY_MARGIN),
+        CANVAS_WIDTH - OVERLAY_WIDTH - OVERLAY_MARGIN
+      )
+    : 0;
+  const overlayTop = overlayScreenRect
+    ? Math.min(
+        Math.max(overlayScreenRect.y, OVERLAY_MARGIN),
+        CANVAS_HEIGHT - overlayHeight - OVERLAY_MARGIN
+      )
+    : 0;
 
   return (
     <div className="relative">
@@ -207,11 +411,16 @@ export default function FloorPlanCanvas({
         scaleY={view.scale}
         x={view.x}
         y={view.y}
-        draggable
+        draggable={!pendingCategory}
         onWheel={handleWheel}
         onDragEnd={handleStageDragEnd}
         className="rounded-md border border-gray-300 bg-white shadow-sm"
+        style={pendingCategory ? { cursor: "crosshair" } : undefined}
         onMouseDown={(e) => {
+          if (pendingCategory) {
+            handleDrawMouseDown();
+            return;
+          }
           if (e.target === e.target.getStage()) {
             onSelect(null);
             onSelectHeatDetector(null);
@@ -219,6 +428,7 @@ export default function FloorPlanCanvas({
             onSelectSprinklerHead(null);
           }
         }}
+        onMouseMove={pendingCategory ? handleDrawMouseMove : undefined}
       >
         <Layer>
           <Rect
@@ -280,9 +490,24 @@ export default function FloorPlanCanvas({
             onToggleSelect={onSelectSprinklerHead}
           />
         ))}
+        {drawRect && (
+          <Rect
+            x={drawRect.x}
+            y={drawRect.y}
+            width={drawRect.width}
+            height={drawRect.height}
+            fill="#2563eb"
+            opacity={0.15}
+            stroke="#2563eb"
+            strokeWidth={awaitingChoice ? 2 : 1}
+            dash={awaitingChoice ? undefined : [6, 4]}
+            listening={false}
+          />
+        )}
         <Transformer
           ref={transformerRef}
           rotateEnabled={false}
+          keepRatio={false}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 10 || newBox.height < 10) {
               return oldBox;
@@ -292,6 +517,15 @@ export default function FloorPlanCanvas({
         />
         </Layer>
       </Stage>
+      {awaitingChoice && (
+        <StructureTypeChoiceOverlay
+          left={overlayLeft}
+          top={overlayTop}
+          options={choiceOptions}
+          onChoose={handleChooseType}
+          onCancel={handleCancelDraw}
+        />
+      )}
     </div>
   );
 }

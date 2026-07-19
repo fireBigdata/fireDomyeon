@@ -17,6 +17,7 @@ import type {
 } from "@/types/floorplan";
 import type { ExitLight } from "@/types/exitLight";
 import { createStructure } from "@/lib/structureFactory";
+import type { StructureRect } from "@/lib/structureFactory";
 import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
 import { pixelAreaToSquareMeters } from "@/lib/area";
 import { computeTotalStructurePixelArea } from "@/lib/structureArea";
@@ -83,16 +84,16 @@ export function useFloorPlanState(initial?: FloorPlanState) {
   }, []);
 
   const addStructure = useCallback(
-    (type: StructureType, roomType?: RoomType, entranceType?: EntranceType) => {
+    (
+      type: StructureType,
+      rect: StructureRect,
+      roomType?: RoomType,
+      entranceType?: EntranceType
+    ) => {
       setState((prev) => {
         const floor = prev.floors.find((f) => f.id === prev.currentFloorId);
         if (!floor) return prev;
-        const structure = createStructure(
-          type,
-          floor.structures.length,
-          roomType,
-          entranceType
-        );
+        const structure = createStructure(type, rect, roomType, entranceType);
         return {
           ...prev,
           floors: prev.floors.map((f) =>
