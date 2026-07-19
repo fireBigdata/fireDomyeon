@@ -71,8 +71,10 @@ const STRUCTURE_CATEGORY_CHOICES: StructureCategoryChoice[] = [
   })),
 ];
 
-const OVERLAY_WIDTH = 176;
-const OVERLAY_MARGIN = 8;
+// Radial "용도 선택" menu: each option is a circle arranged around the
+// cursor position where the drag finished.
+const RADIAL_MENU_RADIUS = 82;
+const RADIAL_OPTION_SIZE = 60;
 
 type ViewTransform = { scale: number; x: number; y: number };
 
@@ -143,10 +145,17 @@ export default function FloorPlanCanvas({
   const nodesRef = useRef<Map<string, Konva.Group>>(new Map());
   const [view, setView] = useState<ViewTransform>(INITIAL_VIEW);
   const drawStartRef = useRef<{ x: number; y: number } | null>(null);
+  // The pointer's own content-space position, kept up to date through the
+  // drag so the choice overlay can center on wherever the cursor actually
+  // was at mouseup, not on the drawn rectangle's corner.
+  const lastPointerContentRef = useRef<{ x: number; y: number } | null>(null);
   const [drawRect, setDrawRect] = useState<StructureRect | null>(null);
   // True once mouseup finalizes the dragged rect: the rect stops updating
   // and the "용도 선택" overlay takes over until the user picks a type (or cancels).
   const [awaitingChoice, setAwaitingChoice] = useState(false);
+  // Cursor content-space position captured right as the structure finished
+  // being drawn — the choice overlay is centered here.
+  const [choiceCenter, setChoiceCenter] = useState<{ x: number; y: number } | null>(null);
 
   const registerNode = useCallback((id: string, node: Konva.Group | null) => {
     if (node) {
@@ -219,6 +228,7 @@ export default function FloorPlanCanvas({
     if (!pointer) return;
     const point = toContentPoint(pointer);
     drawStartRef.current = point;
+    lastPointerContentRef.current = point;
     setDrawRect({ x: point.x, y: point.y, width: 0, height: 0 });
   }, [awaitingChoice, toContentPoint]);
 
@@ -229,6 +239,7 @@ export default function FloorPlanCanvas({
     const pointer = stageRef.current?.getPointerPosition();
     if (!pointer) return;
     const point = toContentPoint(pointer);
+    lastPointerContentRef.current = point;
     setDrawRect({
       x: Math.min(start.x, point.x),
       y: Math.min(start.y, point.y),
@@ -241,6 +252,7 @@ export default function FloorPlanCanvas({
     if (awaitingChoice) return;
     const start = drawStartRef.current;
     const rect = drawRect;
+    const cursorPoint = lastPointerContentRef.current;
     drawStartRef.current = null;
     if (!start || !rect || !pendingCategory) {
       setDrawRect(null);
@@ -255,6 +267,7 @@ export default function FloorPlanCanvas({
         pendingCategory === "entrance" ? STRUCTURE_DEFAULTS.entrance : STRUCTURE_DEFAULTS.room;
       setDrawRect({ x: start.x, y: start.y, width: defaults.width, height: defaults.height });
     }
+    setChoiceCenter(cursorPoint ?? start);
     setAwaitingChoice(true);
   }, [awaitingChoice, drawRect, pendingCategory]);
 
@@ -271,6 +284,7 @@ export default function FloorPlanCanvas({
       drawStartRef.current = null;
       setDrawRect(null);
       setAwaitingChoice(false);
+      setChoiceCenter(null);
     },
     [drawRect, pendingCategory, onConfirmStructure]
   );
@@ -279,6 +293,7 @@ export default function FloorPlanCanvas({
     drawStartRef.current = null;
     setDrawRect(null);
     setAwaitingChoice(false);
+    setChoiceCenter(null);
     onCancelPendingStructure();
   }, [onCancelPendingStructure]);
 
@@ -353,25 +368,25 @@ export default function FloorPlanCanvas({
         }))
       : STRUCTURE_CATEGORY_CHOICES;
 
-  const overlayScreenRect = drawRect
+  // Screen-space center for the radial choice menu, clamped so the ring of
+  // option circles around it stays fully inside the canvas.
+  const choiceCenterScreen = choiceCenter
     ? {
-        x: drawRect.x * view.scale + view.x,
-        y: drawRect.y * view.scale + view.y,
-        width: drawRect.width * view.scale,
-        height: drawRect.height * view.scale,
+        x: choiceCenter.x * view.scale + view.x,
+        y: choiceCenter.y * view.scale + view.y,
       }
     : null;
-  const overlayHeight = 44 + choiceOptions.length * 34;
-  const overlayLeft = overlayScreenRect
+  const choiceMenuMargin = RADIAL_MENU_RADIUS + RADIAL_OPTION_SIZE / 2 + 4;
+  const choiceCenterX = choiceCenterScreen
     ? Math.min(
-        Math.max(overlayScreenRect.x + overlayScreenRect.width + OVERLAY_MARGIN, OVERLAY_MARGIN),
-        CANVAS_WIDTH - OVERLAY_WIDTH - OVERLAY_MARGIN
+        Math.max(choiceCenterScreen.x, choiceMenuMargin),
+        CANVAS_WIDTH - choiceMenuMargin
       )
     : 0;
-  const overlayTop = overlayScreenRect
+  const choiceCenterY = choiceCenterScreen
     ? Math.min(
-        Math.max(overlayScreenRect.y, OVERLAY_MARGIN),
-        CANVAS_HEIGHT - overlayHeight - OVERLAY_MARGIN
+        Math.max(choiceCenterScreen.y, choiceMenuMargin),
+        CANVAS_HEIGHT - choiceMenuMargin
       )
     : 0;
 
@@ -519,8 +534,10 @@ export default function FloorPlanCanvas({
       </Stage>
       {awaitingChoice && (
         <StructureTypeChoiceOverlay
-          left={overlayLeft}
-          top={overlayTop}
+          centerX={choiceCenterX}
+          centerY={choiceCenterY}
+          radius={RADIAL_MENU_RADIUS}
+          optionSize={RADIAL_OPTION_SIZE}
           options={choiceOptions}
           onChoose={handleChooseType}
           onCancel={handleCancelDraw}

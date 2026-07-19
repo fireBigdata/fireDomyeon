@@ -8,54 +8,67 @@ export type StructureTypeChoiceOption = {
 };
 
 type StructureTypeChoiceOverlayProps = {
-  left: number;
-  top: number;
+  /** Screen-space point (relative to the canvas wrapper) to center the ring of options on. */
+  centerX: number;
+  centerY: number;
+  /** Distance from the center to each option circle. */
+  radius: number;
+  /** Diameter of each option circle. */
+  optionSize: number;
   options: StructureTypeChoiceOption[];
   onChoose: (value: string) => void;
   onCancel: () => void;
 };
 
 /** Floating "round checkbox" (radio) picker shown right after a drag creates
- * a structure's rectangle, letting the user pick its 용도 before it's saved. */
+ * a structure's rectangle: options ring around the cursor's drop point so
+ * the user can pick a 용도 without moving the mouse far. */
 export default function StructureTypeChoiceOverlay({
-  left,
-  top,
+  centerX,
+  centerY,
+  radius,
+  optionSize,
   options,
   onChoose,
   onCancel,
 }: StructureTypeChoiceOverlayProps) {
   return (
     <div
-      className="absolute z-20 w-44 rounded-md border border-gray-300 bg-white p-2 shadow-lg"
-      style={{ left, top }}
+      className="absolute z-20"
+      style={{ left: centerX, top: centerY, width: 0, height: 0 }}
     >
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-500">용도 선택</span>
-        <button
-          type="button"
-          onClick={onCancel}
-          aria-label="취소"
-          className="rounded px-1 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        {options.map((option) => (
+      <button
+        type="button"
+        onClick={onCancel}
+        aria-label="취소"
+        className="absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-gray-300 bg-white text-xs text-gray-400 shadow-md hover:bg-gray-50 hover:text-gray-600"
+      >
+        ✕
+      </button>
+      {options.map((option, index) => {
+        const angle = (index / options.length) * 2 * Math.PI - Math.PI / 2;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        return (
           <button
             key={option.value}
             type="button"
             onClick={() => onChoose(option.value)}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-gray-50"
+            title={option.label}
+            className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full border-2 p-1 text-center text-[10px] font-medium leading-tight break-keep text-gray-800 shadow-md transition-transform hover:z-10 hover:scale-110"
+            style={{
+              left: x,
+              top: y,
+              width: optionSize,
+              height: optionSize,
+              backgroundColor: option.fill,
+              borderColor: option.stroke,
+            }}
           >
-            <span
-              className="inline-block h-4 w-4 flex-shrink-0 rounded-full border-2"
-              style={{ backgroundColor: option.fill, borderColor: option.stroke }}
-            />
             {option.label}
           </button>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
