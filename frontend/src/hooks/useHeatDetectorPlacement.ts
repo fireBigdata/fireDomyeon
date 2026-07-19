@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import type { Floor, HeatDetector } from "@/types/floorplan";
-import { DEFAULT_COVERAGE_AREA } from "@/constants/heatDetector";
+import type { EquipmentProduct } from "@/types/equipmentSelection";
+import { HeatDetectorType } from "@/types/heatDetector";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 import {
   HEAT_DETECTOR_TYPE_LABELS,
@@ -25,39 +26,43 @@ export type HeatDetectorSummary = {
   byRoom: HeatDetectorRoomSummary[];
 };
 
-const INVALID_MESSAGE = "보호면적은 0보다 큰 숫자여야 합니다.";
-
-function parseCoverageArea(input: string): number | null {
-  if (input.trim() === "") return null;
-  const value = Number(input);
-  if (!Number.isFinite(value) || value <= 0) return null;
-  return value;
-}
+const NO_PRODUCT_MESSAGE =
+  "설비 선택 페이지에서 차동식열감지기와 정온식열감지기를 먼저 선택해주세요.";
+const NO_ABILITY_UNIT_MESSAGE =
+  "선택한 감지기의 보호면적이 아직 등록되지 않았습니다.";
 
 export function useHeatDetectorPlacement(
   floor: Floor,
   scale: number,
+  differentialProduct: EquipmentProduct | null,
+  fixedTemperatureProduct: EquipmentProduct | null,
   onPlaced: (detectors: HeatDetector[]) => void
 ) {
-  const [coverageAreaInput, setCoverageAreaInputState] = useState(
-    String(DEFAULT_COVERAGE_AREA)
-  );
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<HeatDetectorSummary | null>(null);
 
-  const setCoverageAreaInput = useCallback((value: string) => {
-    setCoverageAreaInputState(value);
-    setError(parseCoverageArea(value) === null ? INVALID_MESSAGE : null);
-  }, []);
-
   const autoPlace = useCallback(() => {
-    const coverageArea = parseCoverageArea(coverageAreaInput);
-    if (coverageArea === null) {
-      setError(INVALID_MESSAGE);
+    if (!differentialProduct || !fixedTemperatureProduct) {
+      setError(NO_PRODUCT_MESSAGE);
       return;
     }
 
-    const detectors = autoPlaceHeatDetectors(floor, coverageArea, scale);
+    if (
+      differentialProduct.abilityUnit == null ||
+      differentialProduct.abilityUnit <= 0 ||
+      fixedTemperatureProduct.abilityUnit == null ||
+      fixedTemperatureProduct.abilityUnit <= 0
+    ) {
+      setError(NO_ABILITY_UNIT_MESSAGE);
+      return;
+    }
+
+    const coverageAreaByType = {
+      [HeatDetectorType.DIFFERENTIAL]: differentialProduct.abilityUnit,
+      [HeatDetectorType.FIXED_TEMPERATURE]: fixedTemperatureProduct.abilityUnit,
+    };
+
+    const detectors = autoPlaceHeatDetectors(floor, coverageAreaByType, scale);
 
     const rooms = floor.structures.filter((s) => s.type === "room");
     const totalArea = rooms.reduce(
@@ -72,9 +77,10 @@ export function useHeatDetectorPlacement(
       count: detectors.filter((detector) => detector.roomId === room.id).length,
     }));
 
+    setError(null);
     setSummary({ totalArea, totalCount: detectors.length, byRoom });
     onPlaced(detectors);
-  }, [coverageAreaInput, floor, scale, onPlaced]);
+  }, [differentialProduct, fixedTemperatureProduct, floor, scale, onPlaced]);
 
-  return { coverageAreaInput, setCoverageAreaInput, error, summary, autoPlace };
+  return { error, summary, autoPlace };
 }

@@ -22,8 +22,8 @@ type LeftPanelProps = {
   extinguisherError: string | null;
   onAutoPlaceExtinguishers: () => void;
   extinguisherSummary: ExtinguisherSummary | null;
-  heatDetectorCoverageAreaInput: string;
-  onHeatDetectorCoverageAreaChange: (value: string) => void;
+  selectedDifferentialDetectorProduct: EquipmentProduct | null;
+  selectedFixedTemperatureDetectorProduct: EquipmentProduct | null;
   heatDetectorError: string | null;
   onAutoPlaceHeatDetectors: () => void;
   heatDetectorSummary: HeatDetectorSummary | null;
@@ -44,8 +44,8 @@ export default function LeftPanel({
   extinguisherError,
   onAutoPlaceExtinguishers,
   extinguisherSummary,
-  heatDetectorCoverageAreaInput,
-  onHeatDetectorCoverageAreaChange,
+  selectedDifferentialDetectorProduct,
+  selectedFixedTemperatureDetectorProduct,
   heatDetectorError,
   onAutoPlaceHeatDetectors,
   heatDetectorSummary,
@@ -68,8 +68,8 @@ export default function LeftPanel({
         summary={extinguisherSummary}
       />
       <HeatDetectorPanel
-        coverageAreaInput={heatDetectorCoverageAreaInput}
-        onCoverageAreaChange={onHeatDetectorCoverageAreaChange}
+        differentialProduct={selectedDifferentialDetectorProduct}
+        fixedTemperatureProduct={selectedFixedTemperatureDetectorProduct}
         error={heatDetectorError}
         onAutoPlace={onAutoPlaceHeatDetectors}
         summary={heatDetectorSummary}

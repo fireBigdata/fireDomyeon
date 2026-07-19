@@ -1,9 +1,12 @@
 import type { Floor, Structure } from "@/types/floorplan";
 import type { HeatDetector } from "@/types/heatDetector";
+import { HeatDetectorType } from "@/types/heatDetector";
 import { createId } from "@/lib/id";
 import { pixelAreaToSquareMeters } from "@/lib/area";
 import { computeEffectivePixelArea, computeLeafBoxes, type Box } from "@/lib/partitionTree";
 import { getHeatDetectorTypeForRoom } from "@/constants/heatDetectorTypes";
+
+export type CoverageAreaByDetectorType = Record<HeatDetectorType, number>;
 
 export type Point = { x: number; y: number };
 export type Grid = { rows: number; columns: number };
@@ -181,18 +184,20 @@ export function calculateRoomDetectorPositions(
  */
 export function autoPlaceHeatDetectors(
   floor: Floor,
-  coverageArea: number,
+  coverageAreaByType: CoverageAreaByDetectorType,
   scale: number
 ): HeatDetector[] {
-  validateCoverageArea(coverageArea);
+  validateCoverageArea(coverageAreaByType[HeatDetectorType.DIFFERENTIAL]);
+  validateCoverageArea(coverageAreaByType[HeatDetectorType.FIXED_TEMPERATURE]);
 
   const detectors: HeatDetector[] = [];
   for (const room of floor.structures) {
     if (room.type !== "room") continue;
 
+    const type = getHeatDetectorTypeForRoom(room.roomType);
+    const coverageArea = coverageAreaByType[type];
     const areaM2 = pixelAreaToSquareMeters(computeEffectivePixelArea(room), scale);
     const count = calculateRequiredDetectorCount(areaM2, coverageArea);
-    const type = getHeatDetectorTypeForRoom(room.roomType);
 
     for (const point of calculateRoomDetectorPositions(room, count)) {
       detectors.push({

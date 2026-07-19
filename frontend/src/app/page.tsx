@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
-import { useSelectedExtinguisherProduct } from "@/hooks/useSelectedExtinguisherProduct";
+import { useSelectedEquipmentProduct } from "@/hooks/useSelectedEquipmentProduct";
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
 import { useExitLightPlacement } from "@/hooks/useExitLightPlacement";
 import { useSprinklerPlacement } from "@/hooks/useSprinklerPlacement";
@@ -81,7 +81,9 @@ export default function Home() {
     saveFloorPlanStateToStorage(state);
   }, [state]);
 
-  const selectedExtinguisherProduct = useSelectedExtinguisherProduct();
+  const selectedExtinguisherProduct = useSelectedEquipmentProduct("소화기");
+  const selectedDifferentialDetectorProduct = useSelectedEquipmentProduct("차동식열감지기");
+  const selectedFixedTemperatureDetectorProduct = useSelectedEquipmentProduct("정온식열감지기");
 
   const {
     error: extinguisherError,
@@ -96,12 +98,16 @@ export default function Home() {
   );
 
   const {
-    coverageAreaInput: heatDetectorCoverageAreaInput,
-    setCoverageAreaInput: setHeatDetectorCoverageAreaInput,
     error: heatDetectorError,
     summary: heatDetectorSummary,
     autoPlace: autoPlaceHeatDetectors,
-  } = useHeatDetectorPlacement(currentFloor, state.scale, setHeatDetectors);
+  } = useHeatDetectorPlacement(
+    currentFloor,
+    state.scale,
+    selectedDifferentialDetectorProduct,
+    selectedFixedTemperatureDetectorProduct,
+    setHeatDetectors
+  );
 
   const { summary: exitLightSummary, autoPlace: autoPlaceExitLights } =
     useExitLightPlacement(currentFloor, state.scale, setExitLights);
@@ -143,8 +149,8 @@ export default function Home() {
           extinguisherError={extinguisherError}
           onAutoPlaceExtinguishers={autoPlaceExtinguishers}
           extinguisherSummary={extinguisherSummary}
-          heatDetectorCoverageAreaInput={heatDetectorCoverageAreaInput}
-          onHeatDetectorCoverageAreaChange={setHeatDetectorCoverageAreaInput}
+          selectedDifferentialDetectorProduct={selectedDifferentialDetectorProduct}
+          selectedFixedTemperatureDetectorProduct={selectedFixedTemperatureDetectorProduct}
           heatDetectorError={heatDetectorError}
           onAutoPlaceHeatDetectors={autoPlaceHeatDetectors}
           heatDetectorSummary={heatDetectorSummary}

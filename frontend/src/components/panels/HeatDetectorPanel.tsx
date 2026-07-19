@@ -1,44 +1,75 @@
 "use client";
 
+import type { EquipmentProduct } from "@/types/equipmentSelection";
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 
 type HeatDetectorPanelProps = {
-  coverageAreaInput: string;
-  onCoverageAreaChange: (value: string) => void;
+  differentialProduct: EquipmentProduct | null;
+  fixedTemperatureProduct: EquipmentProduct | null;
   error: string | null;
   onAutoPlace: () => void;
   summary: HeatDetectorSummary | null;
 };
 
+function ProductRow({
+  label,
+  product,
+}: {
+  label: string;
+  product: EquipmentProduct | null;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 text-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-gray-500">{label}</span>
+        <span className="font-medium text-gray-800">
+          {product ? product.name : "미선택"}
+        </span>
+      </div>
+      {product && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">보호면적</span>
+          <span className="font-medium text-gray-800">
+            {product.abilityUnit != null ? `${product.abilityUnit}㎡` : "미등록"}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HeatDetectorPanel({
-  coverageAreaInput,
-  onCoverageAreaChange,
+  differentialProduct,
+  fixedTemperatureProduct,
   error,
   onAutoPlace,
   summary,
 }: HeatDetectorPanelProps) {
+  const canPlace =
+    !!differentialProduct &&
+    !!fixedTemperatureProduct &&
+    (differentialProduct.abilityUnit ?? 0) > 0 &&
+    (fixedTemperatureProduct.abilityUnit ?? 0) > 0;
+
   return (
     <div className="flex flex-col gap-1.5 border-t border-gray-200 pt-4">
       <label className="mb-1 block text-xs font-medium text-gray-500">
         열 감지기 자동 배치
       </label>
-      <label className="flex items-center gap-2 text-sm">
-        <span className="text-gray-500">보호면적</span>
-        <input
-          type="number"
-          step="0.1"
-          value={coverageAreaInput}
-          onChange={(e) => onCoverageAreaChange(e.target.value)}
-          aria-invalid={!!error}
-          className="w-20 rounded-md border border-gray-300 px-2 py-1 text-right text-sm aria-[invalid=true]:border-red-400"
-        />
-        <span className="text-gray-500">m²당 1개</span>
-      </label>
+
+      <ProductRow label="차동식열감지기" product={differentialProduct} />
+      <ProductRow label="정온식열감지기" product={fixedTemperatureProduct} />
+      {!differentialProduct || !fixedTemperatureProduct ? (
+        <p className="text-xs text-gray-400">
+          설비 선택 페이지에서 차동식/정온식열감지기를 먼저 선택해주세요.
+        </p>
+      ) : null}
       {error && <p className="text-xs text-red-600">{error}</p>}
+
       <button
         type="button"
         onClick={onAutoPlace}
-        disabled={!!error}
+        disabled={!canPlace}
         className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
       >
         열 감지기 자동 배치

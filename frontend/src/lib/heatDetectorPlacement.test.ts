@@ -26,6 +26,13 @@ function isFiniteNumber(value: number): boolean {
   return Number.isFinite(value);
 }
 
+function uniformCoverage(area: number) {
+  return {
+    [HeatDetectorType.DIFFERENTIAL]: area,
+    [HeatDetectorType.FIXED_TEMPERATURE]: area,
+  };
+}
+
 describe("calculateRequiredDetectorCount", () => {
   it.each([
     [10, 20, 1],
@@ -209,7 +216,7 @@ describe("autoPlaceHeatDetectors", () => {
     ]);
 
     // PIXELS_PER_METER = 30, so a 90x90 room is 9m², a 300x300 room is 100m².
-    const detectors = autoPlaceHeatDetectors(floor, 20, 1);
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
 
     const livingDetectors = detectors.filter((d) => d.roomId === "living");
     const kitchenDetectors = detectors.filter((d) => d.roomId === "kitchen");
@@ -222,8 +229,8 @@ describe("autoPlaceHeatDetectors", () => {
 
   it("throws instead of silently computing anything for an invalid coverage area", () => {
     const floor = makeFloor([makeRoom()]);
-    expect(() => autoPlaceHeatDetectors(floor, 0, 1)).toThrow();
-    expect(() => autoPlaceHeatDetectors(floor, -1, 1)).toThrow();
+    expect(() => autoPlaceHeatDetectors(floor, uniformCoverage(0), 1)).toThrow();
+    expect(() => autoPlaceHeatDetectors(floor, uniformCoverage(-1), 1)).toThrow();
   });
 
   it("ignores non-room structures", () => {
@@ -231,7 +238,7 @@ describe("autoPlaceHeatDetectors", () => {
       makeRoom({ id: "room-a" }),
       { id: "corridor-a", type: "corridor", x: 0, y: 0, width: 200, height: 50 },
     ]);
-    const detectors = autoPlaceHeatDetectors(floor, 20, 1);
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
     expect(detectors.every((d) => d.roomId === "room-a")).toBe(true);
   });
 
@@ -244,7 +251,7 @@ describe("autoPlaceHeatDetectors", () => {
       makeRoom({ id: "untyped", x: 800 }),
     ]);
 
-    const detectors = autoPlaceHeatDetectors(floor, 20, 1);
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
     const typeByRoom = (roomId: string) =>
       detectors.find((d) => d.roomId === roomId)?.type;
 

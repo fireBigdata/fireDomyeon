@@ -33,6 +33,12 @@ export { NONE_PRODUCT_ID } from "@/types/equipmentSelection";
  * 계산에 사용합니다 — 모델별 정확한 형식승인 수치가 아니라, 무게(약제 중량) 구간별 KFI 능력단위
  * 인증 관행을 따른 근사값입니다(예: 3.3kg분말=3단위, 20kg 대형분말=10단위, CO2/청정소화기는
  * 무게 대비 다소 낮게 산정). 실제 형식승인서가 확보되면 해당 모델 값으로 교체해주세요.
+ *
+ * 차동식/정온식열감지기의 abilityUnit(보호면적, ㎡)도 열 감지기 자동 배치
+ * (useHeatDetectorPlacement)가 실제로 계산에 사용합니다 — NFTC 203 감지기 바닥면적 표 중
+ * "부착높이 4m 미만·기타구조·2종" 값을 모든 모델에 균일 적용한 근사값입니다(차동식=40㎡,
+ * 정온식=15㎡). 카탈로그에 종별(1종/2종/특종)이나 내화구조 여부가 표기돼 있지 않아 모델별로
+ * 세분화하지 않았습니다. 실제 형식승인서/설치 조건이 확보되면 해당 모델·조건 값으로 교체해주세요.
  */
 export const IS_MOCK_EQUIPMENT_DATA = true;
 
@@ -470,7 +476,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 4180,
       image: "/images/equipment/heat-differential-1.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
     {
       id: "heat-differential-2",
@@ -479,7 +485,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 4950,
       image: "/images/equipment/heat-differential-2.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
     {
       id: "heat-differential-3",
@@ -488,7 +494,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 4950,
       image: "/images/equipment/heat-differential-3.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
     {
       id: "heat-differential-4",
@@ -497,7 +503,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 6050,
       image: "/images/equipment/heat-differential-4.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
     {
       id: "heat-differential-5",
@@ -506,7 +512,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 9000,
       image: "/images/equipment/heat-differential-5.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
     {
       id: "heat-differential-6",
@@ -515,7 +521,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 4840,
       image: "/images/equipment/heat-differential-6.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
     {
       id: "heat-differential-7",
@@ -524,7 +530,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 4950,
       image: "/images/equipment/heat-differential-7.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
     {
       id: "heat-differential-8",
@@ -533,7 +539,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🌡️",
       price: 4400,
       image: "/images/equipment/heat-differential-8.jpg",
-      abilityUnit: null,
+      abilityUnit: 40,
     },
   ],
   정온식열감지기: [
@@ -544,7 +550,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 4180,
       image: "/images/equipment/heat-fixed-1.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
     {
       id: "heat-fixed-2",
@@ -553,7 +559,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 4840,
       image: "/images/equipment/heat-fixed-2.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
     {
       id: "heat-fixed-3",
@@ -562,7 +568,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 4900,
       image: "/images/equipment/heat-fixed-3.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
     {
       id: "heat-fixed-4",
@@ -571,7 +577,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 8250,
       image: "/images/equipment/heat-fixed-4.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
     {
       id: "heat-fixed-5",
@@ -580,7 +586,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 6050,
       image: "/images/equipment/heat-fixed-5.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
     {
       id: "heat-fixed-6",
@@ -589,7 +595,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 4840,
       image: "/images/equipment/heat-fixed-6.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
     {
       id: "heat-fixed-7",
@@ -598,7 +604,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 4950,
       image: "/images/equipment/heat-fixed-7.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
     {
       id: "heat-fixed-8",
@@ -607,7 +613,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🔥",
       price: 4500,
       image: "/images/equipment/heat-fixed-8.jpg",
-      abilityUnit: null,
+      abilityUnit: 15,
     },
   ],
   연기감지기: [
