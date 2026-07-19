@@ -10,9 +10,16 @@ export { NONE_PRODUCT_ID } from "@/types/equipmentSelection";
  * 비상구/복도통로/거실통로/계단통로유도등, 발신기, 옥내소화전, 탬퍼스위치, 압력스위치,
  * 유수검지스위치, 댐퍼, 자동폐쇄장치
  *
- * 예비펌프, 주펌프, 충압펌프, 급기팬, 배기팬은 able119에서 실제 펌프/송풍기 단품을 판매하지
- * 않아(관련 제어반·표지판만 있음) 아직 실제 제품 카탈로그/DB가 연동되기 전까지 사용하는
- * 임시(목업) 데이터이며, 실제 제품 정보와 무관합니다.
+ * 급기팬, 배기팬은 able119에 해당 상품이 없어 다나와(https://search.danawa.com/) 검색 결과의
+ * 실제 산업용 송풍기/환풍기 상품명·가격을 대신 반영했습니다(오픈마켓 판매처 취합 특성상 제조사가
+ * 명시되지 않은 상품이 많습니다). image는 출처 표기가 불명확한 오픈마켓 이미지라 내려받지 않고
+ * null로 두었습니다.
+ *
+ * 예비펌프, 주펌프, 충압펌프는 able119는 물론 다나와에도 실제 상품이 없습니다(검색하면 세탁기,
+ * 청소기 부품, 소방 표지판 스티커 등 무관한 상품만 매칭됨) — 프로젝트별 견적 제작되는 산업용
+ * 소방펌프라 일반 가격비교 사이트에 카탈로그 상품으로 올라오지 않는 것으로 보입니다. 따라서 이
+ * 3종은 아직 실제 제품 카탈로그/DB가 연동되기 전까지 사용하는 임시(목업) 데이터이며, 실제 제품
+ * 정보와 무관합니다.
  *
  * 임시 데이터를 실제 제품으로 교체하려면 아래 EQUIPMENT_PRODUCTS의 각 항목에서:
  * - name, description: 실제 제품명/설명으로 바로 수정
@@ -21,6 +28,11 @@ export { NONE_PRODUCT_ID } from "@/types/equipmentSelection";
  *          "/images/equipment/파일명.jpg" 형태의 경로를 입력 (없으면 null)
  * - abilityUnit: 다른 기능이 참조할 제품별 고유 정수 값 (예: 소화기 능력단위).
  *                설비마다 의미가 다를 수 있음. 미정이면 null 유지
+ *
+ * 소화기의 abilityUnit(능력단위)은 소화기 자동 배치(useExtinguisherPlacement)가 실제로
+ * 계산에 사용합니다 — 모델별 정확한 형식승인 수치가 아니라, 무게(약제 중량) 구간별 KFI 능력단위
+ * 인증 관행을 따른 근사값입니다(예: 3.3kg분말=3단위, 20kg 대형분말=10단위, CO2/청정소화기는
+ * 무게 대비 다소 낮게 산정). 실제 형식승인서가 확보되면 해당 모델 값으로 교체해주세요.
  */
 export const IS_MOCK_EQUIPMENT_DATA = true;
 
@@ -46,6 +58,19 @@ export const EQUIPMENT_LIST: EquipmentName[] = [
   "급기팬",
   "배기팬",
   "자동폐쇄장치",
+];
+
+/** 설비 선택 페이지에서 사용자가 고르기 전부터 카탈로그의 첫 제품을 기본 선택해두는 설비 (소화기/감지기류/유도등류/스프링클러). 나머지는 미선택("선택 필요") 상태로 시작. */
+export const DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT: EquipmentName[] = [
+  "소화기",
+  "스프링클러",
+  "차동식열감지기",
+  "정온식열감지기",
+  "연기감지기",
+  "비상구유도등",
+  "복도통로유도등",
+  "거실통로유도등",
+  "계단통로유도등",
 ];
 
 export const EQUIPMENT_ICONS: Record<EquipmentName, string> = {
@@ -81,7 +106,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 20000,
       image: "/images/equipment/extinguisher-1.jpg",
-      abilityUnit: null,
+      abilityUnit: 3,
     },
     {
       id: "extinguisher-2",
@@ -90,7 +115,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 16500,
       image: "/images/equipment/extinguisher-2.jpg",
-      abilityUnit: null,
+      abilityUnit: 3,
     },
     {
       id: "extinguisher-3",
@@ -99,7 +124,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 22000,
       image: "/images/equipment/extinguisher-3.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-4",
@@ -108,7 +133,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 18700,
       image: "/images/equipment/extinguisher-4.jpg",
-      abilityUnit: null,
+      abilityUnit: 1,
     },
     {
       id: "extinguisher-5",
@@ -117,7 +142,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 35200,
       image: "/images/equipment/extinguisher-5.jpg",
-      abilityUnit: null,
+      abilityUnit: 4,
     },
     {
       id: "extinguisher-6",
@@ -126,7 +151,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 49500,
       image: "/images/equipment/extinguisher-6.jpg",
-      abilityUnit: null,
+      abilityUnit: 5,
     },
     {
       id: "extinguisher-7",
@@ -135,7 +160,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 145000,
       image: "/images/equipment/extinguisher-7.jpg",
-      abilityUnit: null,
+      abilityUnit: 10,
     },
     {
       id: "extinguisher-8",
@@ -144,7 +169,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 18700,
       image: "/images/equipment/extinguisher-8.jpg",
-      abilityUnit: null,
+      abilityUnit: 1,
     },
     {
       id: "extinguisher-9",
@@ -153,7 +178,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 28000,
       image: "/images/equipment/extinguisher-9.jpg",
-      abilityUnit: null,
+      abilityUnit: 3,
     },
     {
       id: "extinguisher-10",
@@ -162,7 +187,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 83600,
       image: "/images/equipment/extinguisher-10.jpg",
-      abilityUnit: null,
+      abilityUnit: 1,
     },
     {
       id: "extinguisher-11",
@@ -171,7 +196,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 143000,
       image: "/images/equipment/extinguisher-11.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-12",
@@ -180,7 +205,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 181500,
       image: "/images/equipment/extinguisher-12.jpg",
-      abilityUnit: null,
+      abilityUnit: 3,
     },
     {
       id: "extinguisher-13",
@@ -189,7 +214,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 137000,
       image: "/images/equipment/extinguisher-13.jpg",
-      abilityUnit: null,
+      abilityUnit: 1,
     },
     {
       id: "extinguisher-14",
@@ -198,7 +223,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 155000,
       image: "/images/equipment/extinguisher-14.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-15",
@@ -207,7 +232,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 178000,
       image: "/images/equipment/extinguisher-15.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-16",
@@ -216,7 +241,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 165000,
       image: "/images/equipment/extinguisher-16.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-17",
@@ -225,7 +250,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 170500,
       image: "/images/equipment/extinguisher-17.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-18",
@@ -234,7 +259,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 168300,
       image: "/images/equipment/extinguisher-18.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-19",
@@ -243,7 +268,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 129900,
       image: "/images/equipment/extinguisher-19.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
     {
       id: "extinguisher-20",
@@ -252,7 +277,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "🧯",
       price: 129800,
       image: "/images/equipment/extinguisher-20.jpg",
-      abilityUnit: null,
+      abilityUnit: 2,
     },
   ],
   스프링클러: [
@@ -1689,28 +1714,46 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
   급기팬: [
     {
       id: "supply-fan-1",
-      name: "표준형 급기팬",
-      description: "제연구역에 신선한 공기를 공급하는 표준형 급기송풍기",
+      name: "FB(BTS)-500 벽걸이형 급기팬",
+      description: "축사·공장용 벽걸이형 강풍기, FB(BTS)-500",
       icon: "🌬️",
-      price: 950000,
+      price: 196000,
       image: null,
       abilityUnit: null,
     },
     {
       id: "supply-fan-2",
-      name: "고압형 급기팬",
-      description: "계단실 및 부속실 가압을 위한 고압 급기송풍기",
+      name: "FB(BTS)-600 스탠드형 급기팬",
+      description: "축사·공장용 스탠드형 강풍기, FB(BTS)-600",
       icon: "🌬️",
-      price: 1350000,
+      price: 221900,
       image: null,
       abilityUnit: null,
     },
     {
       id: "supply-fan-3",
-      name: "인버터 제어 급기팬",
-      description: "풍량을 자동 제어하여 효율을 높인 인버터형 급기송풍기",
+      name: "FB(BTS)-750 벽걸이형 급기팬",
+      description: "축사·공장용 벽걸이형 강풍기, FB(BTS)-750",
       icon: "🌬️",
-      price: 1780000,
+      price: 212200,
+      image: null,
+      abilityUnit: null,
+    },
+    {
+      id: "supply-fan-4",
+      name: "산업용 급기팬 (공기공급 환기장비)",
+      description: "산업용 급기팬, 공기 공급 환기 장비",
+      icon: "🌬️",
+      price: 58520,
+      image: null,
+      abilityUnit: null,
+    },
+    {
+      id: "supply-fan-5",
+      name: "방폭형 강풍기 급기팬 (현장용)",
+      description: "방폭선풍기 겸용 강풍기 급기팬, 공사현장용",
+      icon: "🌬️",
+      price: 217500,
       image: null,
       abilityUnit: null,
     },
@@ -1718,28 +1761,46 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
   배기팬: [
     {
       id: "exhaust-fan-1",
-      name: "표준형 배기팬",
-      description: "화재 시 연기를 옥외로 배출하는 표준형 배연송풍기",
+      name: "공업용 저소음 배기팬 (모델 1000-380)",
+      description: "공업용 환풍기 겸용 저소음 배기팬, 모델 1000-380",
       icon: "🌫️",
-      price: 980000,
+      price: 149500,
       image: null,
       abilityUnit: null,
     },
     {
       id: "exhaust-fan-2",
-      name: "내열형 배기팬",
-      description: "고온의 연기에도 견디는 내열 사양의 배연송풍기",
+      name: "산업용 원심송풍기 배기팬 (전기블로워)",
+      description: "공장환풍용 산업용 원심송풍기 배기팬, 1파이 전기블로워",
       icon: "🌫️",
-      price: 1420000,
+      price: 271510,
       image: null,
       abilityUnit: null,
     },
     {
       id: "exhaust-fan-3",
-      name: "옥상형 배기팬",
-      description: "옥상에 설치해 연기를 직상방으로 배출하는 배연송풍기",
+      name: "시로코팬 공업용 배기팬",
+      description: "저소음 시로코팬 방식 소형 공업용 배기팬, 덕트모터",
       icon: "🌫️",
-      price: 1250000,
+      price: 49330,
+      image: null,
+      abilityUnit: null,
+    },
+    {
+      id: "exhaust-fan-4",
+      name: "휴대용 배기팬 (공사현장용)",
+      description: "휴대용 환풍기 겸용 배기팬, 공사현장·산업용",
+      icon: "🌫️",
+      price: 141210,
+      image: null,
+      abilityUnit: null,
+    },
+    {
+      id: "exhaust-fan-5",
+      name: "덕트형 포터블 배기팬",
+      description: "배풍기 겸용 포터블 배기팬, 덕트팬 업소용",
+      icon: "🌫️",
+      price: 82460,
       image: null,
       abilityUnit: null,
     },

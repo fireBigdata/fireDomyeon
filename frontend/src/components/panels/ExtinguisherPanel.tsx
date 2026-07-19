@@ -1,8 +1,8 @@
 "use client";
 
 import type { FacilityType } from "@/types/floorplan";
+import type { EquipmentProduct } from "@/types/equipmentSelection";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
-import { EXTINGUISHER_TYPES } from "@/constants/extinguisherTypes";
 
 const PANEL_FACILITY_LABELS: Record<FacilityType, string> = {
   apartment: "아파트",
@@ -11,10 +11,7 @@ const PANEL_FACILITY_LABELS: Record<FacilityType, string> = {
 
 type ExtinguisherPanelProps = {
   facilityType: FacilityType;
-  typeId: string;
-  onTypeChange: (id: string) => void;
-  abilityUnitsInput: string;
-  onAbilityUnitsChange: (value: string) => void;
+  selectedProduct: EquipmentProduct | null;
   error: string | null;
   onAutoPlace: () => void;
   summary: ExtinguisherSummary | null;
@@ -22,15 +19,14 @@ type ExtinguisherPanelProps = {
 
 export default function ExtinguisherPanel({
   facilityType,
-  typeId,
-  onTypeChange,
-  abilityUnitsInput,
-  onAbilityUnitsChange,
+  selectedProduct,
   error,
   onAutoPlace,
   summary,
 }: ExtinguisherPanelProps) {
   const isApartment = facilityType === "apartment";
+  const hasAbilityUnit = !isApartment ? (selectedProduct?.abilityUnit ?? 0) > 0 : true;
+  const canPlace = !!selectedProduct && hasAbilityUnit;
 
   return (
     <div className="flex flex-col gap-1.5 border-t border-gray-200 pt-4">
@@ -45,38 +41,34 @@ export default function ExtinguisherPanel({
         </span>
       </div>
 
-      <select
-        value={typeId}
-        onChange={(e) => onTypeChange(e.target.value)}
-        className="w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
-      >
-        {EXTINGUISHER_TYPES.map((type) => (
-          <option key={type.id} value={type.id}>
-            {type.name}
-          </option>
-        ))}
-      </select>
-
-      {!isApartment && (
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500">소화기 1개당 능력단위</span>
-          <input
-            type="number"
-            step="0.1"
-            value={abilityUnitsInput}
-            onChange={(e) => onAbilityUnitsChange(e.target.value)}
-            aria-invalid={!!error}
-            className="w-16 rounded-md border border-gray-300 px-2 py-1 text-right text-sm aria-[invalid=true]:border-red-400"
-          />
-          <span className="text-gray-500">단위</span>
-        </label>
+      {selectedProduct ? (
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">선택된 소화기</span>
+            <span className="font-medium text-gray-800">{selectedProduct.name}</span>
+          </div>
+          {!isApartment && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">소화기 1개당 능력단위</span>
+              <span className="font-medium text-gray-800">
+                {selectedProduct.abilityUnit != null
+                  ? `${selectedProduct.abilityUnit}단위`
+                  : "미등록"}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-400">
+          설비 선택 페이지에서 소화기를 먼저 선택해주세요.
+        </p>
       )}
-      {!isApartment && error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
 
       <button
         type="button"
         onClick={onAutoPlace}
-        disabled={!isApartment && !!error}
+        disabled={!canPlace}
         className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
       >
         소화기 자동 배치

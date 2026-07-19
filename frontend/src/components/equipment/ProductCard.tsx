@@ -60,11 +60,11 @@ export default function ProductCard({
           설치 개수
           <input
             type="number"
-            min={1}
-            value={quantity ?? 1}
+            min={0}
+            value={quantity ?? 0}
             onChange={(e) => {
               const next = Number(e.target.value);
-              onQuantityChange(Number.isNaN(next) ? 1 : Math.max(1, next));
+              onQuantityChange(Number.isNaN(next) ? 0 : Math.max(0, next));
             }}
             className="w-16 rounded-md border border-gray-300 px-2 py-1 text-sm"
           />

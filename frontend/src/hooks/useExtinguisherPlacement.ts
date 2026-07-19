@@ -3,10 +3,7 @@
 import { useCallback, useState } from "react";
 import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { FacilityType, Floor } from "@/types/floorplan";
-import {
-  DEFAULT_ABILITY_UNITS_PER_EXTINGUISHER,
-  DEFAULT_EXTINGUISHER_TYPE_ID,
-} from "@/constants/extinguisherTypes";
+import type { EquipmentProduct } from "@/types/equipmentSelection";
 import type { StructureExtinguisherSummary } from "@/lib/extinguisherPlacement";
 import {
   planApartmentExtinguisherPlacement,
@@ -32,36 +29,27 @@ export type ExtinguisherSummary =
       byStructure: StructureExtinguisherSummary[];
     };
 
-const INVALID_ABILITY_MESSAGE = "소화기 1개당 능력단위는 0보다 큰 숫자여야 합니다.";
-
-function parseAbilityUnits(input: string): number | null {
-  if (input.trim() === "") return null;
-  const value = Number(input);
-  if (!Number.isFinite(value) || value <= 0) return null;
-  return value;
-}
+const NO_PRODUCT_MESSAGE = "설비 선택 페이지에서 소화기를 먼저 선택해주세요.";
+const NO_ABILITY_UNIT_MESSAGE = "선택한 소화기의 능력단위가 아직 등록되지 않았습니다.";
 
 export function useExtinguisherPlacement(
   floor: Floor,
   facilityType: FacilityType,
   scale: number,
+  selectedProduct: EquipmentProduct | null,
   onPlaced: (placements: ExtinguisherPlacement[]) => void
 ) {
-  const [typeId, setTypeId] = useState(DEFAULT_EXTINGUISHER_TYPE_ID);
-  const [abilityUnitsInput, setAbilityUnitsInputState] = useState(
-    String(DEFAULT_ABILITY_UNITS_PER_EXTINGUISHER)
-  );
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ExtinguisherSummary | null>(null);
 
-  const setAbilityUnitsInput = useCallback((value: string) => {
-    setAbilityUnitsInputState(value);
-    setError(parseAbilityUnits(value) === null ? INVALID_ABILITY_MESSAGE : null);
-  }, []);
-
   const autoPlace = useCallback(() => {
+    if (!selectedProduct) {
+      setError(NO_PRODUCT_MESSAGE);
+      return;
+    }
+
     if (facilityType === "apartment") {
-      const result = planApartmentExtinguisherPlacement(floor, scale, typeId);
+      const result = planApartmentExtinguisherPlacement(floor, scale, selectedProduct.id);
       setError(null);
       setSummary({
         facilityType: "apartment",
@@ -74,13 +62,18 @@ export function useExtinguisherPlacement(
       return;
     }
 
-    const abilityUnits = parseAbilityUnits(abilityUnitsInput);
-    if (abilityUnits === null) {
-      setError(INVALID_ABILITY_MESSAGE);
+    if (selectedProduct.abilityUnit == null || selectedProduct.abilityUnit <= 0) {
+      setError(NO_ABILITY_UNIT_MESSAGE);
       return;
     }
 
-    const result = planNonApartmentExtinguisherPlacement(floor, scale, abilityUnits, typeId);
+    const result = planNonApartmentExtinguisherPlacement(
+      floor,
+      scale,
+      selectedProduct.abilityUnit,
+      selectedProduct.id
+    );
+    setError(null);
     setSummary({
       facilityType: "house",
       totalFloorArea: result.totalFloorArea,
@@ -92,13 +85,9 @@ export function useExtinguisherPlacement(
       byStructure: result.byStructure,
     });
     onPlaced(result.placements);
-  }, [facilityType, floor, scale, typeId, abilityUnitsInput, onPlaced]);
+  }, [facilityType, floor, scale, selectedProduct, onPlaced]);
 
   return {
-    typeId,
-    setTypeId,
-    abilityUnitsInput,
-    setAbilityUnitsInput,
     error,
     summary,
     autoPlace,

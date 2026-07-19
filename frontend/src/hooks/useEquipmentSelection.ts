@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
+  DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT,
   EQUIPMENT_LIST,
   EQUIPMENT_PRODUCTS,
 } from "@/constants/equipmentProducts";
@@ -18,14 +19,21 @@ import { getFloorPlanInstalledCount } from "@/lib/equipmentFloorPlanCounts";
 
 function createInitialSelectionState(): EquipmentSelectionState {
   return EQUIPMENT_LIST.reduce((state, name) => {
-    state[name] = null;
+    const firstProduct = EQUIPMENT_PRODUCTS[name][0];
+    state[name] =
+      DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT.includes(name) && firstProduct
+        ? firstProduct.id
+        : null;
     return state;
   }, {} as EquipmentSelectionState);
 }
 
-function createInitialQuantityState(): EquipmentQuantityState {
+function createInitialQuantityState(
+  selection: EquipmentSelectionState,
+  floorPlanSummary: FloorPlanSummary | null
+): EquipmentQuantityState {
   return EQUIPMENT_LIST.reduce((state, name) => {
-    state[name] = 0;
+    state[name] = selection[name] ? getFloorPlanInstalledCount(name, floorPlanSummary) : 0;
     return state;
   }, {} as EquipmentQuantityState);
 }
@@ -36,8 +44,8 @@ export function useEquipmentSelection(
   const [selection, setSelection] = useState<EquipmentSelectionState>(
     createInitialSelectionState
   );
-  const [quantities, setQuantities] = useState<EquipmentQuantityState>(
-    createInitialQuantityState
+  const [quantities, setQuantities] = useState<EquipmentQuantityState>(() =>
+    createInitialQuantityState(selection, floorPlanSummary)
   );
 
   const selectProduct = useCallback(

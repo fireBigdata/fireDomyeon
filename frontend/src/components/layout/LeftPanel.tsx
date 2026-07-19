@@ -1,6 +1,7 @@
 "use client";
 
 import type { FacilityType } from "@/types/floorplan";
+import type { EquipmentProduct } from "@/types/equipmentSelection";
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
 import type { ExitLightSummary } from "@/lib/exitLightPlacement";
@@ -17,10 +18,7 @@ type LeftPanelProps = {
   onFacilityTypeChange: (value: FacilityType) => void;
   pendingCategory: StructureCategory | null;
   onArmStructure: (category: StructureCategory) => void;
-  extinguisherTypeId: string;
-  onExtinguisherTypeChange: (id: string) => void;
-  extinguisherAbilityUnitsInput: string;
-  onExtinguisherAbilityUnitsChange: (value: string) => void;
+  selectedExtinguisherProduct: EquipmentProduct | null;
   extinguisherError: string | null;
   onAutoPlaceExtinguishers: () => void;
   extinguisherSummary: ExtinguisherSummary | null;
@@ -42,10 +40,7 @@ export default function LeftPanel({
   onFacilityTypeChange,
   pendingCategory,
   onArmStructure,
-  extinguisherTypeId,
-  onExtinguisherTypeChange,
-  extinguisherAbilityUnitsInput,
-  onExtinguisherAbilityUnitsChange,
+  selectedExtinguisherProduct,
   extinguisherError,
   onAutoPlaceExtinguishers,
   extinguisherSummary,
@@ -67,10 +62,7 @@ export default function LeftPanel({
       <StructureToolbar pendingCategory={pendingCategory} onArm={onArmStructure} />
       <ExtinguisherPanel
         facilityType={facilityType}
-        typeId={extinguisherTypeId}
-        onTypeChange={onExtinguisherTypeChange}
-        abilityUnitsInput={extinguisherAbilityUnitsInput}
-        onAbilityUnitsChange={onExtinguisherAbilityUnitsChange}
+        selectedProduct={selectedExtinguisherProduct}
         error={extinguisherError}
         onAutoPlace={onAutoPlaceExtinguishers}
         summary={extinguisherSummary}

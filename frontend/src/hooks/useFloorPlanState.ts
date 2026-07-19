@@ -21,6 +21,7 @@ import type { StructureRect } from "@/lib/structureFactory";
 import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
 import { pixelAreaToSquareMeters } from "@/lib/area";
 import { computeTotalStructurePixelArea } from "@/lib/structureArea";
+import { getFloorPlanStateSnapshot } from "@/lib/floorPlanStorage";
 import {
   ROOT_LEAF_ID,
   deleteRegionAt,
@@ -30,7 +31,7 @@ import {
   splitPartitionAt,
 } from "@/lib/partitionTree";
 
-function createInitialState(): FloorPlanState {
+function createFreshState(): FloorPlanState {
   const floor = createFloor("1F");
   return {
     name: "새 도면",
@@ -45,6 +46,25 @@ function createInitialState(): FloorPlanState {
     selectedSprinklerHeadId: null,
     scale: 1,
   };
+}
+
+// Restores the floor plan last drawn on this page. The page component
+// unmounts when navigating to another route (e.g. /equipment-selection) and
+// remounts on the way back, so in-memory state alone doesn't survive the
+// trip — fall back to the autosaved localStorage snapshot instead.
+function createInitialState(): FloorPlanState {
+  const stored = getFloorPlanStateSnapshot();
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored) as FloorPlanState;
+      if (Array.isArray(parsed.floors) && parsed.floors.length > 0) {
+        return parsed;
+      }
+    } catch {
+      // Corrupt or old-shape snapshot: fall through to a fresh plan.
+    }
+  }
+  return createFreshState();
 }
 
 export function useFloorPlanState(initial?: FloorPlanState) {

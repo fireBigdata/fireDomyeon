@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { EQUIPMENT_LIST, EQUIPMENT_PRODUCTS } from "@/constants/equipmentProducts";
 import { useEquipmentSelection } from "@/hooks/useEquipmentSelection";
 import { useFloorPlanSummary } from "@/hooks/useFloorPlanSummary";
+import { saveEquipmentSelectionToStorage } from "@/lib/equipmentSelectionStorage";
 import EquipmentListPanel from "@/components/equipment/EquipmentListPanel";
 import ProductPanel from "@/components/equipment/ProductPanel";
 import FloorPlanSummaryPanel from "@/components/equipment/FloorPlanSummaryPanel";
@@ -16,6 +17,13 @@ export default function EquipmentSelectionPage() {
     useEquipmentSelection(floorPlanSummary);
   const [submitted, setSubmitted] = useState(false);
   const [activeEquipment, setActiveEquipment] = useState(EQUIPMENT_LIST[0]);
+
+  // Lets the floor plan drawing page (a separate route with no shared
+  // state/Context) read which 소화기 was selected here — used by its
+  // extinguisher auto-placement for the product's abilityUnit.
+  useEffect(() => {
+    saveEquipmentSelectionToStorage(selection);
+  }, [selection]);
 
   const completedCount = EQUIPMENT_LIST.filter(
     (name) => selection[name] !== null

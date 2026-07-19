@@ -3,7 +3,7 @@ import { HeatDetectorType } from "@/types/heatDetector";
 import type { EquipmentName } from "@/types/equipmentSelection";
 
 /** Fallback used when the floor plan has no placement data for this equipment (not drawn yet, or not modeled on the drawing page at all). */
-const DEFAULT_QUANTITY = 1;
+const DEFAULT_QUANTITY = 0;
 
 /**
  * Total installed count for `name` from the floor plan drawing page, used as

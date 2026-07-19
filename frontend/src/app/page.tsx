@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
+import { useSelectedExtinguisherProduct } from "@/hooks/useSelectedExtinguisherProduct";
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
 import { useExitLightPlacement } from "@/hooks/useExitLightPlacement";
 import { useSprinklerPlacement } from "@/hooks/useSprinklerPlacement";
@@ -80,11 +81,9 @@ export default function Home() {
     saveFloorPlanStateToStorage(state);
   }, [state]);
 
+  const selectedExtinguisherProduct = useSelectedExtinguisherProduct();
+
   const {
-    typeId: extinguisherTypeId,
-    setTypeId: setExtinguisherTypeId,
-    abilityUnitsInput: extinguisherAbilityUnitsInput,
-    setAbilityUnitsInput: setExtinguisherAbilityUnitsInput,
     error: extinguisherError,
     summary: extinguisherSummary,
     autoPlace: autoPlaceExtinguishers,
@@ -92,6 +91,7 @@ export default function Home() {
     currentFloor,
     state.facilityType,
     state.scale,
+    selectedExtinguisherProduct,
     setExtinguisherPlacements
   );
 
@@ -139,10 +139,7 @@ export default function Home() {
           onFacilityTypeChange={setFacilityType}
           pendingCategory={pendingCategory}
           onArmStructure={handleArmStructure}
-          extinguisherTypeId={extinguisherTypeId}
-          onExtinguisherTypeChange={setExtinguisherTypeId}
-          extinguisherAbilityUnitsInput={extinguisherAbilityUnitsInput}
-          onExtinguisherAbilityUnitsChange={setExtinguisherAbilityUnitsInput}
+          selectedExtinguisherProduct={selectedExtinguisherProduct}
           extinguisherError={extinguisherError}
           onAutoPlaceExtinguishers={autoPlaceExtinguishers}
           extinguisherSummary={extinguisherSummary}
