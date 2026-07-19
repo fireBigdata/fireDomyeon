@@ -106,6 +106,7 @@ export default function Home() {
     state.facilityType,
     state.scale,
     selectedExtinguisherProduct,
+    state.isFireResistantStructure,
     setExtinguisherPlacements
   );
 
@@ -118,6 +119,7 @@ export default function Home() {
     state.scale,
     selectedDifferentialDetectorProduct,
     selectedFixedTemperatureDetectorProduct,
+    state.isFireResistantStructure,
     setHeatDetectors
   );
 

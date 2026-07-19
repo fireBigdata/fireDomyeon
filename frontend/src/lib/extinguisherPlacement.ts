@@ -43,10 +43,20 @@ export function calculateTotalFloorArea(structures: Structure[], scale: number):
   return pixelAreaToSquareMeters(computeTotalStructurePixelArea(structures), scale);
 }
 
-/** Bathroom-code style rule: 1 required ability unit per 100㎡ of floor area. */
-export function calculateRequiredAbilityUnits(totalFloorArea: number): number {
+/**
+ * NFTC 101 별표1: 1 능력단위당 기준면적 100㎡ (기타구조). 내화구조이고 벽/반자가
+ * 불연재료·준불연재료·난연재료인 경우 기준면적을 2배로 적용한다(=200㎡당 1단위),
+ * 감지기 1개당 담당 면적이 넓어지는 것과 같은 이유.
+ */
+export function calculateRequiredAbilityUnits(
+  totalFloorArea: number,
+  isFireResistantStructure?: boolean
+): number {
   if (totalFloorArea <= 0) return 0;
-  return Math.ceil(totalFloorArea / FLOOR_AREA_PER_ABILITY_UNIT);
+  const areaPerUnit = isFireResistantStructure
+    ? FLOOR_AREA_PER_ABILITY_UNIT * 2
+    : FLOOR_AREA_PER_ABILITY_UNIT;
+  return Math.ceil(totalFloorArea / areaPerUnit);
 }
 
 export function validateAbilityUnitsPerExtinguisher(value: number): void {
@@ -515,12 +525,13 @@ export function planNonApartmentExtinguisherPlacement(
   scale: number,
   abilityUnitsPerExtinguisher: number,
   extinguisherTypeId: string,
+  isFireResistantStructure?: boolean,
   maximumDistanceMeters: number = DEFAULT_MAX_TRAVEL_DISTANCE_METERS
 ): NonApartmentPlacementResult {
   validateAbilityUnitsPerExtinguisher(abilityUnitsPerExtinguisher);
 
   const totalFloorArea = calculateTotalFloorArea(floor.structures, scale);
-  const requiredAbilityUnits = calculateRequiredAbilityUnits(totalFloorArea);
+  const requiredAbilityUnits = calculateRequiredAbilityUnits(totalFloorArea, isFireResistantStructure);
   const minimumCountByArea = calculateExtinguisherCountByAbility(
     requiredAbilityUnits,
     abilityUnitsPerExtinguisher

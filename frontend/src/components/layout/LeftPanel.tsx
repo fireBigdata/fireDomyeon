@@ -8,6 +8,7 @@ import type { ExitLightSummary } from "@/lib/exitLightPlacement";
 import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
+import FireResistanceToggle from "@/components/panels/FireResistanceToggle";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 import ExitLightPanel from "@/components/panels/ExitLightPanel";
@@ -60,6 +61,10 @@ export default function LeftPanel({
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
       <FacilityTypeSelect value={facilityType} onChange={onFacilityTypeChange} />
       <StructureToolbar pendingCategory={pendingCategory} onArm={onArmStructure} />
+      <FireResistanceToggle
+        isFireResistantStructure={isFireResistantStructure}
+        onChange={onFireResistantStructureChange}
+      />
       <ExtinguisherPanel
         facilityType={facilityType}
         selectedProduct={selectedExtinguisherProduct}
@@ -75,12 +80,7 @@ export default function LeftPanel({
         summary={heatDetectorSummary}
       />
       <ExitLightPanel onAutoPlace={onAutoPlaceExitLights} summary={exitLightSummary} />
-      <SprinklerPanel
-        isFireResistantStructure={isFireResistantStructure}
-        onFireResistantChange={onFireResistantStructureChange}
-        onAutoPlace={onAutoPlaceSprinklers}
-        summary={sprinklerSummary}
-      />
+      <SprinklerPanel onAutoPlace={onAutoPlaceSprinklers} summary={sprinklerSummary} />
     </aside>
   );
 }

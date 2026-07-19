@@ -4,15 +4,11 @@ import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import { SPRINKLER_STATUS_CLASSES, SPRINKLER_STATUS_LABELS } from "@/constants/sprinklerStatus";
 
 type SprinklerPanelProps = {
-  isFireResistantStructure: boolean;
-  onFireResistantChange: (value: boolean) => void;
   onAutoPlace: () => void;
   summary: SprinklerSummary | null;
 };
 
 export default function SprinklerPanel({
-  isFireResistantStructure,
-  onFireResistantChange,
   onAutoPlace,
   summary,
 }: SprinklerPanelProps) {
@@ -20,14 +16,6 @@ export default function SprinklerPanel({
     <div className="flex flex-col gap-1.5 border-t border-gray-200 pt-4">
       <label className="mb-1 block text-xs font-medium text-gray-500">
         스프링클러 자동 배치 (NFPC/NFTC 103)
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={isFireResistantStructure}
-          onChange={(e) => onFireResistantChange(e.target.checked)}
-        />
-        <span className="text-gray-500">건물 구조가 내화구조입니다</span>
       </label>
       <button
         type="button"

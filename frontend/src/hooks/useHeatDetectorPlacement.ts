@@ -7,6 +7,7 @@ import { HeatDetectorType } from "@/types/heatDetector";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 import {
   HEAT_DETECTOR_TYPE_LABELS,
+  getEffectiveCoverageArea,
   getHeatDetectorTypeForRoom,
 } from "@/constants/heatDetectorTypes";
 import { autoPlaceHeatDetectors } from "@/lib/heatDetectorPlacement";
@@ -36,6 +37,7 @@ export function useHeatDetectorPlacement(
   scale: number,
   differentialProduct: EquipmentProduct | null,
   fixedTemperatureProduct: EquipmentProduct | null,
+  isFireResistantStructure: boolean | undefined,
   onPlaced: (detectors: HeatDetector[]) => void
 ) {
   const [error, setError] = useState<string | null>(null);
@@ -58,8 +60,14 @@ export function useHeatDetectorPlacement(
     }
 
     const coverageAreaByType = {
-      [HeatDetectorType.DIFFERENTIAL]: differentialProduct.abilityUnit,
-      [HeatDetectorType.FIXED_TEMPERATURE]: fixedTemperatureProduct.abilityUnit,
+      [HeatDetectorType.DIFFERENTIAL]: getEffectiveCoverageArea(
+        differentialProduct.abilityUnit,
+        isFireResistantStructure
+      ),
+      [HeatDetectorType.FIXED_TEMPERATURE]: getEffectiveCoverageArea(
+        fixedTemperatureProduct.abilityUnit,
+        isFireResistantStructure
+      ),
     };
 
     const detectors = autoPlaceHeatDetectors(floor, coverageAreaByType, scale);
@@ -80,7 +88,14 @@ export function useHeatDetectorPlacement(
     setError(null);
     setSummary({ totalArea, totalCount: detectors.length, byRoom });
     onPlaced(detectors);
-  }, [differentialProduct, fixedTemperatureProduct, floor, scale, onPlaced]);
+  }, [
+    differentialProduct,
+    fixedTemperatureProduct,
+    isFireResistantStructure,
+    floor,
+    scale,
+    onPlaced,
+  ]);
 
   return { error, summary, autoPlace };
 }

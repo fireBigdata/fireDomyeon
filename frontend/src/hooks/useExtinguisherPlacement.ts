@@ -37,6 +37,7 @@ export function useExtinguisherPlacement(
   facilityType: FacilityType,
   scale: number,
   selectedProduct: EquipmentProduct | null,
+  isFireResistantStructure: boolean | undefined,
   onPlaced: (placements: ExtinguisherPlacement[]) => void
 ) {
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +72,8 @@ export function useExtinguisherPlacement(
       floor,
       scale,
       selectedProduct.abilityUnit,
-      selectedProduct.id
+      selectedProduct.id,
+      isFireResistantStructure
     );
     setError(null);
     setSummary({
@@ -85,7 +87,7 @@ export function useExtinguisherPlacement(
       byStructure: result.byStructure,
     });
     onPlaced(result.placements);
-  }, [facilityType, floor, scale, selectedProduct, onPlaced]);
+  }, [facilityType, floor, scale, selectedProduct, isFireResistantStructure, onPlaced]);
 
   return {
     error,
