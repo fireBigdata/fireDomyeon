@@ -46,6 +46,8 @@ export default function Home() {
     cloneCurrentFloor,
     removeFloor,
     renameFloor,
+    resetCurrentFloor,
+    resetAll,
     selectFloor,
     setExtinguisherPlacements,
     selectHeatDetector,
@@ -71,6 +73,16 @@ export default function Home() {
   ) => {
     addStructure(type, rect, roomType, entranceType);
     setPendingCategory(null);
+  };
+
+  const handleResetCurrentFloor = () => {
+    setPendingCategory(null);
+    resetCurrentFloor();
+  };
+
+  const handleResetAll = () => {
+    setPendingCategory(null);
+    resetAll();
   };
 
   const saveFloorPlan = useSaveFloorPlan();
@@ -127,6 +139,7 @@ export default function Home() {
         onNameChange={setName}
         onSave={() => saveFloorPlan.mutate(state)}
         isSaving={saveFloorPlan.isPending}
+        onResetAll={handleResetAll}
       />
 
       <FloorBar
@@ -137,6 +150,7 @@ export default function Home() {
         onClone={cloneCurrentFloor}
         onRemove={removeFloor}
         onRename={renameFloor}
+        onResetFloor={handleResetCurrentFloor}
       />
 
       <div className="flex flex-1">

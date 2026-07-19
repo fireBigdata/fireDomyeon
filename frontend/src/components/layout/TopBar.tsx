@@ -7,6 +7,7 @@ type TopBarProps = {
   onNameChange: (name: string) => void;
   onSave: () => void;
   isSaving: boolean;
+  onResetAll: () => void;
 };
 
 export default function TopBar({
@@ -14,7 +15,14 @@ export default function TopBar({
   onNameChange,
   onSave,
   isSaving,
+  onResetAll,
 }: TopBarProps) {
+  const handleResetAll = () => {
+    if (window.confirm("도면 전체(모든 층)를 초기화하시겠습니까? 되돌릴 수 없습니다.")) {
+      onResetAll();
+    }
+  };
+
   return (
     <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
       <input
@@ -29,6 +37,13 @@ export default function TopBar({
         >
           설비 선택으로 이동
         </Link>
+        <button
+          type="button"
+          onClick={handleResetAll}
+          className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+        >
+          전체 초기화
+        </button>
         <button
           type="button"
           onClick={onSave}

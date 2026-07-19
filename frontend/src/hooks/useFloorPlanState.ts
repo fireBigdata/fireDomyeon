@@ -451,6 +451,39 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     }));
   }, []);
 
+  // Clears everything drawn on the current floor (structures, detectors,
+  // extinguishers, exit lights, sprinklers) but keeps the floor itself (its
+  // id/name) and every other floor untouched.
+  const resetCurrentFloor = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      floors: prev.floors.map((f) =>
+        f.id === prev.currentFloorId
+          ? {
+              ...f,
+              structures: [],
+              extinguisherPlacements: [],
+              heatDetectors: [],
+              exitLights: [],
+              sprinklerHeads: [],
+            }
+          : f
+      ),
+      selectedStructureId: null,
+      recentlyCreatedStructureId: null,
+      selectedPartitionId: null,
+      selectedHeatDetectorId: null,
+      selectedExitLightId: null,
+      selectedSprinklerHeadId: null,
+    }));
+  }, []);
+
+  // Discards the whole floor plan (every floor) and starts over from a
+  // single blank floor, same as a brand-new plan.
+  const resetAll = useCallback(() => {
+    setState(createFreshState());
+  }, []);
+
   const selectFloor = useCallback((floorId: string) => {
     setState((prev) => ({
       ...prev,
@@ -588,6 +621,8 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     cloneCurrentFloor,
     removeFloor,
     renameFloor,
+    resetCurrentFloor,
+    resetAll,
     selectFloor,
     setExtinguisherPlacements,
     selectHeatDetector,

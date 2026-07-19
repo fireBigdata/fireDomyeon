@@ -11,6 +11,7 @@ type FloorBarProps = {
   onClone: () => void;
   onRemove: (floorId: string) => void;
   onRename: (floorId: string, name: string) => void;
+  onResetFloor: () => void;
 };
 
 export default function FloorBar({
@@ -21,7 +22,16 @@ export default function FloorBar({
   onClone,
   onRemove,
   onRename,
+  onResetFloor,
 }: FloorBarProps) {
+  const currentFloorName =
+    floors.find((f) => f.id === currentFloorId)?.name ?? "현재 층";
+
+  const handleResetFloor = () => {
+    if (window.confirm(`${currentFloorName}에 그린 내용을 모두 지우시겠습니까?`)) {
+      onResetFloor();
+    }
+  };
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
 
@@ -99,6 +109,13 @@ export default function FloorBar({
         className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm hover:bg-gray-50"
       >
         + 층 추가
+      </button>
+      <button
+        type="button"
+        onClick={handleResetFloor}
+        className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+      >
+        층 초기화
       </button>
     </div>
   );
