@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef, useEffect } from "react";
+import { Fragment, useCallback, useRef, useEffect } from "react";
 import { Group, Line, Rect, Text } from "react-konva";
 import type Konva from "konva";
 import type { Structure } from "@/types/floorplan";
@@ -10,10 +10,14 @@ import { ENTRANCE_TYPE_DEFAULTS, DEFAULT_ENTRANCE_TYPE } from "@/constants/entra
 import { computeEffectivePixelArea } from "@/lib/partitionTree";
 import { pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
 import { getStructureLabel } from "@/lib/structureLabel";
+import { snapRectPosition } from "@/lib/structureSnapping";
 import PartitionShape from "./PartitionShape";
 
 type StructureShapeProps = {
   structure: Structure;
+  /** Every structure on the current floor (including this one), used to snap
+   * this structure's edges/center to its neighbors' while dragging it. */
+  allStructures: Structure[];
   scale: number;
   isSelected: boolean;
   suppressTooltip?: boolean;
@@ -51,6 +55,7 @@ function StairsLines({ width, height }: { width: number; height: number }) {
 
 export default function StructureShape({
   structure,
+  allStructures,
   scale,
   isSelected,
   suppressTooltip,
@@ -63,6 +68,28 @@ export default function StructureShape({
   interactionDisabled,
 }: StructureShapeProps) {
   const contentRef = useRef<Konva.Group>(null);
+
+  // Snaps this structure's edges/center to any other structure's while it's
+  // being dragged, so moving it naturally lines rooms/corridors/etc. up.
+  const handleDragBound = useCallback(
+    function (this: Konva.Node, pos: { x: number; y: number }) {
+      const stage = this.getStage();
+      if (!stage) return pos;
+
+      const absoluteTransform = stage.getAbsoluteTransform();
+      const contentPos = absoluteTransform.copy().invert().point(pos);
+      const others = allStructures
+        .filter((s) => s.id !== structure.id)
+        .map((s) => ({ x: s.x, y: s.y, width: s.width, height: s.height }));
+      const snapped = snapRectPosition(
+        { x: contentPos.x, y: contentPos.y, width: structure.width, height: structure.height },
+        others
+      );
+
+      return absoluteTransform.point(snapped);
+    },
+    [allStructures, structure.id, structure.width, structure.height]
+  );
   const defaults = STRUCTURE_DEFAULTS[structure.type];
   const isRoom = structure.type === "room";
   const isEntrance = structure.type === "entrance";
@@ -105,6 +132,7 @@ export default function StructureShape({
       rotation={structure.rotation ?? 0}
       draggable={!interactionDisabled}
       listening={!interactionDisabled}
+      dragBoundFunc={handleDragBound}
       onClick={() => onSelect(structure.id)}
       onTap={() => onSelect(structure.id)}
       onDragEnd={(e) => {

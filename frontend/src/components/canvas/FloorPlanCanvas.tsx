@@ -21,6 +21,8 @@ import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS, ROOM_TYPE_ORDER } from "@/consta
 import { ENTRANCE_TYPE_DEFAULTS, ENTRANCE_TYPE_ORDER } from "@/constants/entranceTypes";
 import { isDoorStructure } from "@/lib/structureArea";
 import { getStructureLabel } from "@/lib/structureLabel";
+import { snapPointToTargets } from "@/lib/structureSnapping";
+import { detectEntranceOrientation, getEntrancePreviewRect } from "@/lib/entrancePlacement";
 import StructureShape from "./StructureShape";
 import HeatDetectorShape from "./HeatDetectorShape";
 import ExitLightShape from "./ExitLightShape";
@@ -226,11 +228,12 @@ export default function FloorPlanCanvas({
     if (awaitingChoice) return;
     const pointer = stageRef.current?.getPointerPosition();
     if (!pointer) return;
-    const point = toContentPoint(pointer);
+    const rawPoint = toContentPoint(pointer);
+    const point = snapPointToTargets(rawPoint, structures);
     drawStartRef.current = point;
     lastPointerContentRef.current = point;
     setDrawRect({ x: point.x, y: point.y, width: 0, height: 0 });
-  }, [awaitingChoice, toContentPoint]);
+  }, [awaitingChoice, toContentPoint, structures]);
 
   const handleDrawMouseMove = useCallback(() => {
     if (awaitingChoice) return;
@@ -238,7 +241,10 @@ export default function FloorPlanCanvas({
     if (!start) return;
     const pointer = stageRef.current?.getPointerPosition();
     if (!pointer) return;
-    const point = toContentPoint(pointer);
+    const rawPoint = toContentPoint(pointer);
+    // Snaps the growing corner to any existing structure's edge/center, so a
+    // newly drawn structure naturally lines up with its neighbors.
+    const point = snapPointToTargets(rawPoint, structures);
     lastPointerContentRef.current = point;
     setDrawRect({
       x: Math.min(start.x, point.x),
@@ -246,7 +252,7 @@ export default function FloorPlanCanvas({
       width: Math.abs(point.x - start.x),
       height: Math.abs(point.y - start.y),
     });
-  }, [awaitingChoice, toContentPoint]);
+  }, [awaitingChoice, toContentPoint, structures]);
 
   const handleDrawMouseUp = useCallback(() => {
     if (awaitingChoice) return;
@@ -254,7 +260,7 @@ export default function FloorPlanCanvas({
     const rect = drawRect;
     const cursorPoint = lastPointerContentRef.current;
     drawStartRef.current = null;
-    if (!start || !rect || !pendingCategory) {
+    if (!start || !rect || pendingCategory !== "structure") {
       setDrawRect(null);
       return;
     }
@@ -263,13 +269,36 @@ export default function FloorPlanCanvas({
       // Plain click, no meaningful drag: fall back to a generic default size
       // anchored at the click point (the exact type isn't known until the
       // choice overlay below is answered).
-      const defaults =
-        pendingCategory === "entrance" ? STRUCTURE_DEFAULTS.entrance : STRUCTURE_DEFAULTS.room;
+      const defaults = STRUCTURE_DEFAULTS.room;
       setDrawRect({ x: start.x, y: start.y, width: defaults.width, height: defaults.height });
     }
     setChoiceCenter(cursorPoint ?? start);
     setAwaitingChoice(true);
   }, [awaitingChoice, drawRect, pendingCategory]);
+
+  // 출입구는 드래그로 크기를 정하지 않고, 고정 크기(STRUCTURE_DEFAULTS.entrance)의
+  // 미리보기가 마우스를 따라다니다가 겹치는 구조물의 벽(가장 가까운 변)에 맞춰
+  // 자동으로 가로/세로 방향을 바꾼다. 클릭하면 그 자리에서 바로 용도 선택으로 넘어간다.
+  const handleEntranceMouseMove = useCallback(() => {
+    if (awaitingChoice) return;
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!pointer) return;
+    const point = toContentPoint(pointer);
+    lastPointerContentRef.current = point;
+    const orientation = detectEntranceOrientation(point, structures);
+    setDrawRect(getEntrancePreviewRect(point, orientation));
+  }, [awaitingChoice, toContentPoint, structures]);
+
+  const handleEntranceClick = useCallback(() => {
+    if (awaitingChoice) return;
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!pointer) return;
+    const point = toContentPoint(pointer);
+    const orientation = detectEntranceOrientation(point, structures);
+    setDrawRect(getEntrancePreviewRect(point, orientation));
+    setChoiceCenter(point);
+    setAwaitingChoice(true);
+  }, [awaitingChoice, toContentPoint, structures]);
 
   const handleChooseType = useCallback(
     (value: string) => {
@@ -297,15 +326,35 @@ export default function FloorPlanCanvas({
     onCancelPendingStructure();
   }, [onCancelPendingStructure]);
 
+  // Snaps whichever corner/edge handle is being dragged so the resized
+  // structure's edge naturally lines up with a neighboring structure.
+  const handleAnchorDragBound = useCallback(
+    (_oldPos: { x: number; y: number }, newPos: { x: number; y: number }) => {
+      const stage = transformerRef.current?.getStage();
+      if (!stage || !selectedStructureId) return newPos;
+
+      const absoluteTransform = stage.getAbsoluteTransform();
+      const contentPoint = absoluteTransform.copy().invert().point(newPos);
+      const others = structures
+        .filter((s) => s.id !== selectedStructureId)
+        .map((s) => ({ x: s.x, y: s.y, width: s.width, height: s.height }));
+      const snapped = snapPointToTargets(contentPoint, others);
+
+      return absoluteTransform.point(snapped);
+    },
+    [structures, selectedStructureId]
+  );
+
   // Fallback for a mouseup that lands outside the canvas (Konva's own
   // mouseup prop only fires while the pointer is over the stage container).
   // Stops listening once awaitingChoice flips on, so a click on the choice
-  // overlay's own buttons (also a mouseup) doesn't re-trigger this.
+  // overlay's own buttons (also a mouseup) doesn't re-trigger this. Only
+  // relevant to "structure" (drag-to-draw); 출입구 has no drag phase.
   useEffect(() => {
-    if (!drawRect || awaitingChoice) return;
+    if (!drawRect || awaitingChoice || pendingCategory !== "structure") return;
     window.addEventListener("mouseup", handleDrawMouseUp);
     return () => window.removeEventListener("mouseup", handleDrawMouseUp);
-  }, [drawRect, awaitingChoice, handleDrawMouseUp]);
+  }, [drawRect, awaitingChoice, pendingCategory, handleDrawMouseUp]);
 
   useEffect(() => {
     if (!pendingCategory) return;
@@ -342,6 +391,7 @@ export default function FloorPlanCanvas({
     <StructureShape
       key={structure.id}
       structure={structure}
+      allStructures={structures}
       scale={scale}
       isSelected={structure.id === selectedStructureId}
       suppressTooltip={structure.id === recentlyCreatedStructureId}
@@ -432,7 +482,11 @@ export default function FloorPlanCanvas({
         className="rounded-md border border-gray-300 bg-white shadow-sm"
         style={pendingCategory ? { cursor: "crosshair" } : undefined}
         onMouseDown={(e) => {
-          if (pendingCategory) {
+          if (pendingCategory === "entrance") {
+            handleEntranceClick();
+            return;
+          }
+          if (pendingCategory === "structure") {
             handleDrawMouseDown();
             return;
           }
@@ -443,7 +497,13 @@ export default function FloorPlanCanvas({
             onSelectSprinklerHead(null);
           }
         }}
-        onMouseMove={pendingCategory ? handleDrawMouseMove : undefined}
+        onMouseMove={
+          pendingCategory === "entrance"
+            ? handleEntranceMouseMove
+            : pendingCategory === "structure"
+              ? handleDrawMouseMove
+              : undefined
+        }
       >
         <Layer>
           <Rect
@@ -523,6 +583,7 @@ export default function FloorPlanCanvas({
           ref={transformerRef}
           rotateEnabled={false}
           keepRatio={false}
+          anchorDragBoundFunc={handleAnchorDragBound}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 10 || newBox.height < 10) {
               return oldBox;
