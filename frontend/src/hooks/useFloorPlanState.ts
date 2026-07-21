@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   EntranceType,
   ExtinguisherPlacement,
@@ -48,29 +48,71 @@ function createFreshState(): FloorPlanState {
   };
 }
 
-// Restores the floor plan last drawn on this page. The page component
-// unmounts when navigating to another route (e.g. /equipment-selection) and
-// remounts on the way back, so in-memory state alone doesn't survive the
-// trip — fall back to the autosaved localStorage snapshot instead.
-function createInitialState(): FloorPlanState {
-  const stored = getFloorPlanStateSnapshot();
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored) as FloorPlanState;
-      if (Array.isArray(parsed.floors) && parsed.floors.length > 0) {
-        return parsed;
-      }
-    } catch {
-      // Corrupt or old-shape snapshot: fall through to a fresh plan.
+// Backfills array fields a floor may be missing if it was saved by an older
+// version of the app (e.g. before sprinklerHeads existed), so consumers like
+// FloorPlanCanvas can always safely .map() over them.
+function normalizeFloor(floor: Partial<Floor>): Floor {
+  return {
+    id: floor.id ?? createFloor("1F").id,
+    name: floor.name ?? "1F",
+    structures: Array.isArray(floor.structures) ? floor.structures : [],
+    extinguisherPlacements: Array.isArray(floor.extinguisherPlacements)
+      ? floor.extinguisherPlacements
+      : [],
+    heatDetectors: Array.isArray(floor.heatDetectors) ? floor.heatDetectors : [],
+    exitLights: Array.isArray(floor.exitLights) ? floor.exitLights : [],
+    sprinklerHeads: Array.isArray(floor.sprinklerHeads) ? floor.sprinklerHeads : [],
+  };
+}
+
+// Parses a raw localStorage snapshot into a FloorPlanState, or null if it's
+// missing/corrupt/old-shape. Normalizes fields an older version of the app
+// may not have saved, rather than trusting the JSON shape as-is.
+function parseStoredState(stored: string | null): FloorPlanState | null {
+  if (!stored) return null;
+  try {
+    const parsed = JSON.parse(stored) as Partial<FloorPlanState>;
+    if (!Array.isArray(parsed.floors) || parsed.floors.length === 0) {
+      return null;
     }
+    const floors = parsed.floors.map(normalizeFloor);
+    const currentFloorId = floors.some((f) => f.id === parsed.currentFloorId)
+      ? (parsed.currentFloorId as string)
+      : floors[0].id;
+    return {
+      ...createFreshState(),
+      ...parsed,
+      floors,
+      currentFloorId,
+    };
+  } catch {
+    // Corrupt or old-shape snapshot: ignore.
   }
-  return createFreshState();
+  return null;
 }
 
 export function useFloorPlanState(initial?: FloorPlanState) {
   const [state, setState] = useState<FloorPlanState>(
-    initial ?? createInitialState
+    initial ?? createFreshState
   );
+
+  // The initial render (and SSR) always starts from a fresh, empty plan so
+  // server and client markup match. Once mounted in the browser, restore the
+  // floor plan last drawn on this page — the page component unmounts when
+  // navigating to another route (e.g. /equipment-selection) and remounts on
+  // the way back, so in-memory state alone doesn't survive the trip.
+  useEffect(() => {
+    if (initial) return;
+    const restored = parseStoredState(getFloorPlanStateSnapshot());
+    if (restored) {
+      // One-time sync from the localStorage snapshot (an external system),
+      // not a derived-state cascade.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState(restored);
+    }
+    // Only ever run on mount: restoring later would clobber in-progress edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const currentFloor = useMemo(
     () =>
