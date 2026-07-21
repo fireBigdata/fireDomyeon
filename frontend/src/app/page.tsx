@@ -134,6 +134,13 @@ export default function Home() {
     setSprinklerHeads
   );
 
+  const handleAutoPlaceAll = () => {
+    autoPlaceExtinguishers();
+    autoPlaceHeatDetectors();
+    autoPlaceExitLights();
+    autoPlaceSprinklers();
+  };
+
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-gray-50">
       <TopBar
@@ -176,6 +183,7 @@ export default function Home() {
           onFireResistantStructureChange={setIsFireResistantStructure}
           onAutoPlaceSprinklers={autoPlaceSprinklers}
           sprinklerSummary={sprinklerSummary}
+          onAutoPlaceAll={handleAutoPlaceAll}
         />
 
         <main className="flex flex-1 flex-col items-center gap-4 overflow-auto p-6">

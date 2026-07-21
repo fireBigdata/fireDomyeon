@@ -9,6 +9,7 @@ import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
 import FireResistanceToggle from "@/components/panels/FireResistanceToggle";
+import AutoPlaceAllButton from "@/components/panels/AutoPlaceAllButton";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 import ExitLightPanel from "@/components/panels/ExitLightPanel";
@@ -34,6 +35,7 @@ type LeftPanelProps = {
   onFireResistantStructureChange: (value: boolean) => void;
   onAutoPlaceSprinklers: () => void;
   sprinklerSummary: SprinklerSummary | null;
+  onAutoPlaceAll: () => void;
 };
 
 export default function LeftPanel({
@@ -56,6 +58,7 @@ export default function LeftPanel({
   onFireResistantStructureChange,
   onAutoPlaceSprinklers,
   sprinklerSummary,
+  onAutoPlaceAll,
 }: LeftPanelProps) {
   return (
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
@@ -65,6 +68,7 @@ export default function LeftPanel({
         isFireResistantStructure={isFireResistantStructure}
         onChange={onFireResistantStructureChange}
       />
+      <AutoPlaceAllButton onAutoPlaceAll={onAutoPlaceAll} />
       <ExtinguisherPanel
         facilityType={facilityType}
         selectedProduct={selectedExtinguisherProduct}
