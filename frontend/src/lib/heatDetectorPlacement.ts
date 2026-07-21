@@ -5,6 +5,7 @@ import { createId } from "@/lib/id";
 import { pixelAreaToSquareMeters } from "@/lib/area";
 import { computeEffectivePixelArea, computeLeafBoxes, type Box } from "@/lib/partitionTree";
 import { getHeatDetectorTypeForRoom } from "@/constants/heatDetectorTypes";
+import { getObstaclesNear, moveOffObstacles } from "@/lib/obstacleAvoidance";
 
 export type CoverageAreaByDetectorType = Record<HeatDetectorType, number>;
 
@@ -198,14 +199,16 @@ export function autoPlaceHeatDetectors(
     const coverageArea = coverageAreaByType[type];
     const areaM2 = pixelAreaToSquareMeters(computeEffectivePixelArea(room), scale);
     const count = calculateRequiredDetectorCount(areaM2, coverageArea);
+    const obstacles = getObstaclesNear(room, floor.structures);
 
     for (const point of calculateRoomDetectorPositions(room, count)) {
+      const placed = moveOffObstacles(point, obstacles, room);
       detectors.push({
         id: createId("heat-detector"),
         floorId: floor.id,
         roomId: room.id,
-        x: point.x,
-        y: point.y,
+        x: placed.x,
+        y: placed.y,
         coverageArea,
         type,
         isAutoPlaced: true,

@@ -6,6 +6,7 @@ import { createId } from "@/lib/id";
 import { metersToPixelLength, pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
 import { computeLeafBoxes, type Box } from "@/lib/partitionTree";
 import { computeTotalStructurePixelArea } from "@/lib/structureArea";
+import { getObstaclesNear, moveOffObstacles } from "@/lib/obstacleAvoidance";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 
@@ -235,7 +236,8 @@ function placePointsInStructure(
   structure: Structure,
   count: number,
   entrances: Structure[],
-  biasPointAbsolute?: Point
+  biasPointAbsolute?: Point,
+  obstacles: Box[] = []
 ): Point[] {
   if (count <= 0) return [];
 
@@ -264,10 +266,9 @@ function placePointsInStructure(
     }
   }
 
-  return placePointsOnPerimeter(box, count, startParam).map((p) => ({
-    x: structure.x + p.x,
-    y: structure.y + p.y,
-  }));
+  return placePointsOnPerimeter(box, count, startParam).map((p) =>
+    moveOffObstacles({ x: structure.x + p.x, y: structure.y + p.y }, obstacles, structure)
+  );
 }
 
 /** Nudges any point that lands within MIN_SEPARATION_PX of an earlier one, so icons never overlap. */
@@ -352,7 +353,8 @@ export function placeExtinguishersNearWalls(
   const raw: { point: Point; structureId: string }[] = [];
   for (const space of spaces) {
     const n = countByStructure.get(space.id) ?? 0;
-    for (const point of placePointsInStructure(space, n, entrances)) {
+    const obstacles = getObstaclesNear(space, floor.structures);
+    for (const point of placePointsInStructure(space, n, entrances, undefined, obstacles)) {
       raw.push({ point, structureId: space.id });
     }
   }
@@ -372,7 +374,8 @@ export function placeApartmentExtinguishers(
   for (const item of breakdown.byStructure) {
     const structure = byId.get(item.structureId);
     if (!structure || item.count <= 0) continue;
-    for (const point of placePointsInStructure(structure, item.count, entrances)) {
+    const obstacles = getObstaclesNear(structure, floor.structures);
+    for (const point of placePointsInStructure(structure, item.count, entrances, undefined, obstacles)) {
       raw.push({ point, structureId: structure.id });
     }
   }
@@ -550,7 +553,8 @@ export function planNonApartmentExtinguisherPlacement(
     const targetSpace = findContainingOrNearestSpace(gapPoint, spaces);
     if (!targetSpace) break;
 
-    const [extraPointRaw] = placePointsInStructure(targetSpace, 1, entrances, gapPoint);
+    const obstaclesNearTarget = getObstaclesNear(targetSpace, floor.structures);
+    const [extraPointRaw] = placePointsInStructure(targetSpace, 1, entrances, gapPoint, obstaclesNearTarget);
     const existingPoints = placements.map((p) => ({ point: { x: p.x, y: p.y } }));
     const resolved = resolveOverlaps([...existingPoints, { point: extraPointRaw }]);
     const resolvedExtra = resolved[resolved.length - 1].point;

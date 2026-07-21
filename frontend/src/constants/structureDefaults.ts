@@ -44,6 +44,13 @@ export const STRUCTURE_DEFAULTS: Record<StructureType, StructureDefault> = {
     fill: "#fee2e2",
     stroke: "#dc2626",
   },
+  obstacle: {
+    label: "장애물",
+    width: 40,
+    height: 40,
+    fill: "#9ca3af",
+    stroke: "#4b5563",
+  },
 };
 
 export const STRUCTURE_TYPE_ORDER: StructureType[] = [
@@ -52,6 +59,7 @@ export const STRUCTURE_TYPE_ORDER: StructureType[] = [
   "entrance",
   "elevator",
   "stairs",
+  "obstacle",
 ];
 
 export const FACILITY_TYPE_LABELS: Record<string, string> = {

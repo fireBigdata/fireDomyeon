@@ -86,6 +86,27 @@ describe("calculateExitLightPlacements", () => {
     expect(light.x).toBe(130);
     expect(light.y).toBe(210);
   });
+
+  it("nudges the light away from an obstacle placed on top of the entrance's center", () => {
+    const entrance = makeStructure({
+      id: "e1",
+      type: "entrance",
+      entranceType: EntranceType.COMMON,
+      x: 0,
+      y: 0,
+      width: 60,
+      height: 20,
+    });
+    // The entrance's center (30,10) sits inside this obstacle.
+    const obstacle = makeStructure({ id: "obs-1", type: "obstacle", x: 20, y: 0, width: 20, height: 20 });
+    const floor = makeFloor([entrance, obstacle]);
+
+    const [light] = calculateExitLightPlacements(floor);
+
+    const insideObstacle =
+      light.x > obstacle.x && light.x < obstacle.x + obstacle.width && light.y > obstacle.y && light.y < obstacle.y + obstacle.height;
+    expect(insideObstacle).toBe(false);
+  });
 });
 
 describe("calculateStairLightPlacements", () => {
@@ -107,6 +128,19 @@ describe("calculateStairLightPlacements", () => {
       makeStructure({ id: "stairs-2", type: "stairs", x: 300, y: 0 }),
     ]);
     expect(calculateStairLightPlacements(floor)).toHaveLength(2);
+  });
+
+  it("nudges the light away from an obstacle placed on top of the stairs' center", () => {
+    const stairs = makeStructure({ id: "stairs-1", type: "stairs", x: 0, y: 0, width: 90, height: 110 });
+    // Stairs center = (45,55); the obstacle covers that point.
+    const obstacle = makeStructure({ id: "obs-1", type: "obstacle", x: 35, y: 45, width: 20, height: 20 });
+    const floor = makeFloor([stairs, obstacle]);
+
+    const [light] = calculateStairLightPlacements(floor);
+
+    const insideObstacle =
+      light.x > obstacle.x && light.x < obstacle.x + obstacle.width && light.y > obstacle.y && light.y < obstacle.y + obstacle.height;
+    expect(insideObstacle).toBe(false);
   });
 });
 
@@ -145,6 +179,25 @@ describe("calculatePassageLightPlacements", () => {
 
   it("returns nothing for an empty segment list", () => {
     expect(calculatePassageLightPlacements("floor-1", [], "CORRIDOR", 1)).toHaveLength(0);
+  });
+
+  it("nudges an interior interval light away from an obstacle on top of it, without moving the required endpoints", () => {
+    // 1260px = 42m -> 3 lights, evenly spaced at x = 0, 630, 1260 (interior one at 630).
+    const corridor = makeStructure({ id: "corridor-1", x: 0, y: 0, width: 1260, height: 50 });
+    const obstacle = makeStructure({ id: "obs-1", type: "obstacle", x: 620, y: 15, width: 20, height: 20 });
+
+    const lights = calculatePassageLightPlacements("floor-1", [corridor], "CORRIDOR", 1, [corridor, obstacle]);
+
+    expect(lights.map((l) => l.x).sort((a, b) => a - b)[0]).toBe(0);
+    expect(lights.map((l) => l.x).sort((a, b) => a - b).at(-1)).toBe(1260);
+    const interior = lights.find((l) => l.x > 100 && l.x < 1160);
+    expect(interior).toBeDefined();
+    const insideObstacle =
+      interior!.x > obstacle.x &&
+      interior!.x < obstacle.x + obstacle.width &&
+      interior!.y > obstacle.y &&
+      interior!.y < obstacle.y + obstacle.height;
+    expect(insideObstacle).toBe(false);
   });
 });
 

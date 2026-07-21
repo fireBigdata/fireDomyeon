@@ -286,4 +286,22 @@ describe("planNonApartmentExtinguisherPlacement", () => {
     const structureIds = new Set(placements.map((p) => p.structureId));
     expect(structureIds.size).toBe(3);
   });
+
+  it("nudges an extinguisher away from an obstacle placed on top of it", () => {
+    const room = makeRoom({ width: 120, height: 100 });
+    // A single extinguisher would land near the top-left wall margin; the obstacle covers that point.
+    const obstacle: Structure = { id: "obs-1", type: "obstacle", x: 0, y: 0, width: 20, height: 20 };
+    const floor = makeFloor([room, obstacle]);
+
+    const placements = placeExtinguishersNearWalls(floor, 1, "A");
+
+    expect(placements).toHaveLength(1);
+    const [placement] = placements;
+    const insideObstacle =
+      placement.x > obstacle.x &&
+      placement.x < obstacle.x + obstacle.width &&
+      placement.y > obstacle.y &&
+      placement.y < obstacle.y + obstacle.height;
+    expect(insideObstacle).toBe(false);
+  });
 });

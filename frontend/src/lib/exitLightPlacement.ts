@@ -4,6 +4,7 @@ import type { ExitLight, ExitLightCategory } from "@/types/exitLight";
 import type { Point } from "@/lib/heatDetectorPlacement";
 import { createId } from "@/lib/id";
 import { pixelLengthToMeters } from "@/lib/area";
+import { getObstaclesNear, moveOffObstacles } from "@/lib/obstacleAvoidance";
 
 const MAX_PASSAGE_SPACING_METERS = 20;
 
@@ -151,20 +152,28 @@ function buildLight(
  * 복도통로유도등: 20m-interval passage lighting for corridor structures —
  * evenly spaced lights along each corridor's centerline, plus a mandatory
  * light at every point where two corridors meet and change direction.
+ *
+ * Endpoint and bend positions are never inset from the segment's own
+ * boundary (they must land exactly there to guarantee the 20m coverage and
+ * to mark the actual turn) — but any point that would land inside/right
+ * next to an obstacle is nudged clear of it, staying within the segment.
  */
 export function calculatePassageLightPlacements(
   floorId: string,
   segments: Structure[],
   category: ExitLightCategory,
-  scale: number
+  scale: number,
+  allStructures: Structure[] = segments
 ): ExitLight[] {
   const lights: ExitLight[] = [];
 
   for (const segment of segments) {
+    const obstacles = getObstaclesNear(segment, allStructures);
     const spanMeters = pixelLengthToMeters(spanLengthPx(segment), scale);
     const count = calculateRequiredPassageLightCount(spanMeters);
     for (const point of pointsAlongCenterline(segment, count)) {
-      lights.push(buildLight(floorId, segment.id, category, point, false));
+      const placed = moveOffObstacles(point, obstacles, segment);
+      lights.push(buildLight(floorId, segment.id, category, placed, false));
     }
   }
 
@@ -172,7 +181,8 @@ export function calculatePassageLightPlacements(
     const alreadyCovered = lights.some((light) => distance(light, bend) <= BEND_DEDUPE_TOLERANCE_PX);
     if (alreadyCovered) continue;
     const owner = findOwningSegment(bend, segments);
-    lights.push(buildLight(floorId, owner?.id ?? segments[0].id, category, bend, true));
+    const placed = owner ? moveOffObstacles(bend, getObstaclesNear(owner, allStructures), owner) : bend;
+    lights.push(buildLight(floorId, owner?.id ?? segments[0].id, category, placed, true));
   }
 
   return lights;
@@ -186,15 +196,11 @@ export function calculateExitLightPlacements(floor: Floor): ExitLight[] {
         s.type === "entrance" &&
         (s.entranceType === EntranceType.COMMON || s.entranceType === EntranceType.EMERGENCY)
     )
-    .map((entrance) =>
-      buildLight(
-        floor.id,
-        entrance.id,
-        "EXIT",
-        { x: entrance.x + entrance.width / 2, y: entrance.y + entrance.height / 2 },
-        false
-      )
-    );
+    .map((entrance) => {
+      const point = { x: entrance.x + entrance.width / 2, y: entrance.y + entrance.height / 2 };
+      const obstacles = getObstaclesNear(entrance, floor.structures);
+      return buildLight(floor.id, entrance.id, "EXIT", moveOffObstacles(point, obstacles, entrance), false);
+    });
 }
 
 /**
@@ -208,15 +214,11 @@ export function calculateExitLightPlacements(floor: Floor): ExitLight[] {
 export function calculateStairLightPlacements(floor: Floor): ExitLight[] {
   return floor.structures
     .filter((s) => s.type === "stairs")
-    .map((stairs) =>
-      buildLight(
-        floor.id,
-        stairs.id,
-        "STAIRS",
-        { x: stairs.x + stairs.width / 2, y: stairs.y + stairs.height / 2 },
-        false
-      )
-    );
+    .map((stairs) => {
+      const point = { x: stairs.x + stairs.width / 2, y: stairs.y + stairs.height / 2 };
+      const obstacles = getObstaclesNear(stairs, floor.structures);
+      return buildLight(floor.id, stairs.id, "STAIRS", moveOffObstacles(point, obstacles, stairs), false);
+    });
 }
 
 export type ExitLightSummary = {
@@ -243,7 +245,7 @@ export function autoPlaceExitLights(floor: Floor, scale: number): ExitLight[] {
 
   return [
     ...calculateExitLightPlacements(floor),
-    ...calculatePassageLightPlacements(floor.id, corridors, "CORRIDOR", scale),
+    ...calculatePassageLightPlacements(floor.id, corridors, "CORRIDOR", scale, floor.structures),
     ...calculateStairLightPlacements(floor),
   ];
 }

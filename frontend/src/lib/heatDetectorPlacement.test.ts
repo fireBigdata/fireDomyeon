@@ -242,6 +242,25 @@ describe("autoPlaceHeatDetectors", () => {
     expect(detectors.every((d) => d.roomId === "room-a")).toBe(true);
   });
 
+  it("nudges a detector away from an obstacle placed on top of it", () => {
+    const room = makeRoom({ id: "living", width: 90, height: 90 });
+    // A single detector would land at the room's center (45,45); the obstacle covers that point.
+    const obstacle: Structure = { id: "obs-1", type: "obstacle", x: 35, y: 35, width: 20, height: 20 };
+    const floor = makeFloor([room, obstacle]);
+
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
+    const livingDetectors = detectors.filter((d) => d.roomId === "living");
+
+    expect(livingDetectors).toHaveLength(1);
+    const [detector] = livingDetectors;
+    const insideObstacle =
+      detector.x > obstacle.x &&
+      detector.x < obstacle.x + obstacle.width &&
+      detector.y > obstacle.y &&
+      detector.y < obstacle.y + obstacle.height;
+    expect(insideObstacle).toBe(false);
+  });
+
   it("uses fixed-temperature detectors for kitchens and boiler rooms, differential elsewhere", () => {
     const floor = makeFloor([
       makeRoom({ id: "living", roomType: RoomType.LIVING }),

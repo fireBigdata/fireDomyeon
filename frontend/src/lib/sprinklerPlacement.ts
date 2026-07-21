@@ -10,6 +10,7 @@ import type { SprinklerClassificationContext, SprinklerRuleId } from "@/lib/spri
 import { createId } from "@/lib/id";
 import { metersToPixelLength } from "@/lib/area";
 import { computeLeafBoxes, type Box } from "@/lib/partitionTree";
+import { getObstaclesNear, moveOffObstacles } from "@/lib/obstacleAvoidance";
 
 export type Point = { x: number; y: number };
 export type SprinklerGrid = { rows: number; columns: number };
@@ -126,6 +127,7 @@ export function planStructureSprinklerPlacement(
   const maxSpacingPx = metersToPixelLength(maxSpacingForRadius(rule.horizontalDistanceM), scale);
 
   const regions = getPlacementRegions(structure);
+  const obstacles = getObstaclesNear(structure, floor.structures);
   const heads: SprinklerHead[] = [];
   let anyUsableRegion = false;
   let anyRegionInvalid = false;
@@ -141,12 +143,17 @@ export function planStructureSprinklerPlacement(
     }
 
     for (const point of calculateSprinklerPositions(region, grid)) {
+      const placed = moveOffObstacles(
+        { x: structure.x + point.x, y: structure.y + point.y },
+        obstacles,
+        structure
+      );
       heads.push({
         id: createId("sprinkler"),
         floorId: floor.id,
         roomId: structure.id,
-        x: structure.x + point.x,
-        y: structure.y + point.y,
+        x: placed.x,
+        y: placed.y,
         headType: rule.headType,
         isAutoPlaced: true,
         ruleId: rule.id,

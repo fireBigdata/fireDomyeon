@@ -238,6 +238,24 @@ describe("planStructureSprinklerPlacement — classification", () => {
     const { result } = planStructureSprinklerPlacement(floor, room, APARTMENT, 1);
     expect(result.warnings.some((w) => w.includes("장애물"))).toBe(true);
   });
+
+  it("nudges a head away from an obstacle structure placed on top of it", () => {
+    const room = makeRoom({ width: 60, height: 60, roomType: RoomType.LIVING });
+    // A single head would land at the room's center (30,30); the obstacle covers that point.
+    const obstacle: Structure = { id: "obs-1", type: "obstacle", x: 20, y: 20, width: 20, height: 20 };
+    const floorWithObstacle = makeFloor([room, obstacle]);
+
+    const { heads } = planStructureSprinklerPlacement(floorWithObstacle, room, APARTMENT, 1);
+
+    expect(heads).toHaveLength(1);
+    const [head] = heads;
+    const insideObstacle =
+      head.x > obstacle.x &&
+      head.x < obstacle.x + obstacle.width &&
+      head.y > obstacle.y &&
+      head.y < obstacle.y + obstacle.height;
+    expect(insideObstacle).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

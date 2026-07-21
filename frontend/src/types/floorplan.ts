@@ -9,7 +9,8 @@ export type StructureType =
   | "corridor"
   | "entrance"
   | "elevator"
-  | "stairs";
+  | "stairs"
+  | "obstacle";
 
 export type FacilityType = "apartment" | "house";
 
