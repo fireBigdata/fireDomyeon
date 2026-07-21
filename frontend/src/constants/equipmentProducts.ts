@@ -66,7 +66,7 @@ export const EQUIPMENT_LIST: EquipmentName[] = [
   "자동폐쇄장치",
 ];
 
-/** 설비 선택 페이지에서 사용자가 고르기 전부터 카탈로그의 첫 제품을 기본 선택해두는 설비 (소화기/감지기류/유도등류/스프링클러). 나머지는 미선택("선택 필요") 상태로 시작. */
+/** 설비 선택 페이지에서 사용자가 고르기 전부터 카탈로그의 첫 제품을 기본 선택해두는 설비 (소화기/감지기류/유도등류/스프링클러/옥내소화전). 나머지는 미선택("선택 필요") 상태로 시작. */
 export const DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT: EquipmentName[] = [
   "소화기",
   "스프링클러",
@@ -77,6 +77,7 @@ export const DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT: EquipmentName[] = [
   "복도통로유도등",
   "거실통로유도등",
   "계단통로유도등",
+  "옥내소화전",
 ];
 
 export const EQUIPMENT_ICONS: Record<EquipmentName, string> = {

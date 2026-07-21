@@ -24,6 +24,7 @@ export type FloorEquipmentSummary = {
   heatDetectorCountsByType: HeatDetectorTypeCounts;
   exitLightCountsByCategory: ExitLightCategoryCounts;
   sprinklerHeadCount: number;
+  hydrantCount: number;
 };
 
 export type FloorPlanSummary = {
@@ -37,6 +38,7 @@ export type FloorPlanSummary = {
   totalHeatDetectorCountsByType: HeatDetectorTypeCounts;
   totalExitLightCountsByCategory: ExitLightCategoryCounts;
   totalSprinklerHeadCount: number;
+  totalHydrantCount: number;
   byFloor: FloorEquipmentSummary[];
 };
 
@@ -82,6 +84,7 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     heatDetectorCountsByType: countHeatDetectorsByType(floor.heatDetectors),
     exitLightCountsByCategory: countExitLightsByCategory(floor.exitLights),
     sprinklerHeadCount: floor.sprinklerHeads?.length ?? 0,
+    hydrantCount: floor.hydrantPlacements?.length ?? 0,
   }));
 
   const totalAreaSqm = floorPlan.floors.reduce(
@@ -126,6 +129,7 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     totalHeatDetectorCountsByType,
     totalExitLightCountsByCategory,
     totalSprinklerHeadCount: byFloor.reduce((sum, f) => sum + f.sprinklerHeadCount, 0),
+    totalHydrantCount: byFloor.reduce((sum, f) => sum + f.hydrantCount, 0),
     byFloor,
   };
 }
