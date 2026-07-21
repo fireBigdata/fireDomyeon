@@ -8,6 +8,7 @@ import { useSelectedEquipmentProduct } from "@/hooks/useSelectedEquipmentProduct
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
 import { useExitLightPlacement } from "@/hooks/useExitLightPlacement";
 import { useSprinklerPlacement } from "@/hooks/useSprinklerPlacement";
+import { useHydrantPlacement } from "@/hooks/useHydrantPlacement";
 import { saveFloorPlanStateToStorage } from "@/lib/floorPlanStorage";
 import TopBar from "@/components/layout/TopBar";
 import FloorBar from "@/components/layout/FloorBar";
@@ -56,6 +57,8 @@ export default function Home() {
     setExitLights,
     selectSprinklerHead,
     setSprinklerHeads,
+    selectHydrant,
+    setHydrantPlacements,
   } = useFloorPlanState();
 
   const [pendingCategory, setPendingCategory] = useState<StructureCategory | null>(null);
@@ -96,6 +99,7 @@ export default function Home() {
   const selectedExtinguisherProduct = useSelectedEquipmentProduct("소화기");
   const selectedDifferentialDetectorProduct = useSelectedEquipmentProduct("차동식열감지기");
   const selectedFixedTemperatureDetectorProduct = useSelectedEquipmentProduct("정온식열감지기");
+  const selectedHydrantProduct = useSelectedEquipmentProduct("옥내소화전");
 
   const {
     error: extinguisherError,
@@ -134,11 +138,25 @@ export default function Home() {
     setSprinklerHeads
   );
 
+  const {
+    error: hydrantError,
+    summary: hydrantSummary,
+    autoPlace: autoPlaceHydrants,
+  } = useHydrantPlacement(
+    state.floors,
+    currentFloor,
+    state.facilityType,
+    state.scale,
+    selectedHydrantProduct,
+    setHydrantPlacements
+  );
+
   const handleAutoPlaceAll = () => {
     autoPlaceExtinguishers();
     autoPlaceHeatDetectors();
     autoPlaceExitLights();
     autoPlaceSprinklers();
+    autoPlaceHydrants();
   };
 
   return (
@@ -183,6 +201,10 @@ export default function Home() {
           onFireResistantStructureChange={setIsFireResistantStructure}
           onAutoPlaceSprinklers={autoPlaceSprinklers}
           sprinklerSummary={sprinklerSummary}
+          selectedHydrantProduct={selectedHydrantProduct}
+          hydrantError={hydrantError}
+          onAutoPlaceHydrants={autoPlaceHydrants}
+          hydrantSummary={hydrantSummary}
           onAutoPlaceAll={handleAutoPlaceAll}
         />
 
@@ -204,12 +226,15 @@ export default function Home() {
             selectedExitLightId={state.selectedExitLightId}
             sprinklerHeads={currentFloor.sprinklerHeads}
             selectedSprinklerHeadId={state.selectedSprinklerHeadId}
+            hydrantPlacements={currentFloor.hydrantPlacements}
+            selectedHydrantId={state.selectedHydrantId}
             onSelect={selectStructure}
             onSelectPartition={selectPartition}
             onResizePartition={resizePartition}
             onSelectHeatDetector={selectHeatDetector}
             onSelectExitLight={selectExitLight}
             onSelectSprinklerHead={selectSprinklerHead}
+            onSelectHydrant={selectHydrant}
             onChange={updateStructure}
             pendingCategory={pendingCategory}
             onConfirmStructure={handleConfirmStructure}

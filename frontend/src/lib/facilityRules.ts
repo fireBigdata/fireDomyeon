@@ -1,0 +1,59 @@
+import type { FacilityType } from "@/types/floorplan";
+
+// ---------------------------------------------------------------------------
+// Facility-type classification shared by the equipment placement engines
+// (extinguisherPlacement.ts, sprinklerRules.ts). Room-level usage inside a
+// non-residential facility (병원/학교/상가/지하철역/공장/창고) is intentionally
+// NOT sub-classified (no per-facility RoomType taxonomy) — every such room
+// uses RoomType.GENERIC and equipment counts are computed from floor area /
+// corridor length / structure count instead, mirroring how NFTC 101/103
+// actually apply to most 특정소방대상물 (면적 기준), not room-by-room usage.
+//
+// IMPORTANT: verify these categorizations and area values against the
+// officially gazetted NFPC 101/103 text in effect on the applicable date —
+// this module cannot fetch the live proclamation and does not model
+// specialized provisions (e.g. 랙식창고 NFTC 609, 지하역사 특례).
+// ---------------------------------------------------------------------------
+
+/** apartment/villa: 공동주택(아파트/연립·다세대주택) — 세대별 room/corridor 개수 기준이 적용된다. */
+export function isResidentialUnitFacility(
+  facilityType: FacilityType
+): facilityType is "apartment" | "villa" {
+  return facilityType === "apartment" || facilityType === "villa";
+}
+
+export type ExtinguisherAreaPerUnit = {
+  /** ㎡ per required ability unit for a non-fire-resistant structure. */
+  normal: number;
+  /** ㎡ per required ability unit when the structure is fire-resistant (내화구조). */
+  fireResistant: number;
+};
+
+/**
+ * NFTC 101 별표2 (소화기구의 능력단위기준) — 특정소방대상물 용도별 능력단위
+ * 기준면적. 이 앱이 다루는 용도는 두 그룹으로 나뉜다:
+ * - 100㎡(내화구조 200㎡)당 1단위: 근린생활시설(상가), 운수시설(지하철역),
+ *   공장, 창고시설, 그리고 이 앱이 별도 세대별 계산을 쓰지 않는 단독주택(house).
+ * - 200㎡(내화구조 400㎡)당 1단위: "그 밖의 것"에 해당하는 의료시설(병원),
+ *   교육연구시설(학교).
+ * apartment/villa는 이 표를 쓰지 않고 세대별 거실/복도 개수 기준을 따로
+ * 적용한다 (calculateApartmentExtinguisherBreakdown 참고).
+ */
+export const EXTINGUISHER_AREA_PER_UNIT_M2: Record<
+  Exclude<FacilityType, "apartment" | "villa">,
+  ExtinguisherAreaPerUnit
+> = {
+  house: { normal: 100, fireResistant: 200 },
+  commercial: { normal: 100, fireResistant: 200 },
+  subway: { normal: 100, fireResistant: 200 },
+  factory: { normal: 100, fireResistant: 200 },
+  warehouse: { normal: 100, fireResistant: 200 },
+  hospital: { normal: 200, fireResistant: 400 },
+  school: { normal: 200, fireResistant: 400 },
+};
+
+export function getExtinguisherAreaPerUnit(
+  facilityType: Exclude<FacilityType, "apartment" | "villa">
+): ExtinguisherAreaPerUnit {
+  return EXTINGUISHER_AREA_PER_UNIT_M2[facilityType];
+}

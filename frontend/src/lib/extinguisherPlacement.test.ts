@@ -47,6 +47,7 @@ function makeFloor(structures: Structure[]): Floor {
     heatDetectors: [],
     exitLights: [],
     sprinklerHeads: [],
+    hydrantPlacements: [],
   };
 }
 
@@ -76,6 +77,14 @@ describe("calculateRequiredAbilityUnits + calculateExtinguisherCountByAbility", 
     expect(() => calculateExtinguisherCountByAbility(3, 0)).toThrow();
     expect(() => calculateExtinguisherCountByAbility(3, -1)).toThrow();
     expect(() => calculateExtinguisherCountByAbility(3, NaN)).toThrow();
+  });
+
+  it("accepts a custom area-per-unit table (facility-type-specific)", () => {
+    const areaPerUnit = { normal: 200, fireResistant: 400 };
+    expect(calculateRequiredAbilityUnits(200, false, areaPerUnit)).toBe(1);
+    expect(calculateRequiredAbilityUnits(201, false, areaPerUnit)).toBe(2);
+    expect(calculateRequiredAbilityUnits(400, true, areaPerUnit)).toBe(1);
+    expect(calculateRequiredAbilityUnits(401, true, areaPerUnit)).toBe(2);
   });
 });
 
@@ -303,5 +312,36 @@ describe("planNonApartmentExtinguisherPlacement", () => {
       placement.y > obstacle.y &&
       placement.y < obstacle.y + obstacle.height;
     expect(insideObstacle).toBe(false);
+  });
+});
+
+describe("planNonApartmentExtinguisherPlacement — facility-type area-per-unit", () => {
+  it("hospital/school (그 밖의 것, 200㎡ group) require fewer ability units than commercial/warehouse (100㎡ group) for the same area", () => {
+    // 450x300px room = 15m x 10m = 150㎡ at PIXELS_PER_METER=30.
+    const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 450, height: 300 });
+    const floor = makeFloor([room]);
+
+    const commercialResult = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A", undefined, "commercial");
+    const hospitalResult = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A", undefined, "hospital");
+
+    expect(commercialResult.requiredAbilityUnits).toBe(2); // ceil(150/100)
+    expect(hospitalResult.requiredAbilityUnits).toBe(1); // ceil(150/200)
+  });
+
+  it("defaults to the 100㎡ group (unchanged prior behavior) when no facility type is given", () => {
+    const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 450, height: 300 });
+    const floor = makeFloor([room]);
+    const result = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A");
+    expect(result.requiredAbilityUnits).toBe(2);
+  });
+
+  it("subway/factory/warehouse also use the 100㎡ group, same as commercial/house", () => {
+    const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 450, height: 300 });
+    const floor = makeFloor([room]);
+
+    for (const facilityType of ["subway", "factory", "warehouse"] as const) {
+      const result = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A", undefined, facilityType);
+      expect(result.requiredAbilityUnits).toBe(2);
+    }
   });
 });

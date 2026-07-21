@@ -13,6 +13,7 @@ import type {
   StructureType,
 } from "@/types/floorplan";
 import type { ExitLight } from "@/types/exitLight";
+import type { HydrantPlacement } from "@/types/hydrant";
 import type { StructureRect } from "@/lib/structureFactory";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
 import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
@@ -27,6 +28,7 @@ import StructureShape from "./StructureShape";
 import HeatDetectorShape from "./HeatDetectorShape";
 import ExitLightShape from "./ExitLightShape";
 import SprinklerHeadShape from "./SprinklerHeadShape";
+import HydrantShape from "./HydrantShape";
 import StructureTypeChoiceOverlay from "./StructureTypeChoiceOverlay";
 
 const CANVAS_WIDTH = 900;
@@ -99,12 +101,15 @@ type FloorPlanCanvasProps = {
   selectedExitLightId: string | null;
   sprinklerHeads: SprinklerHead[];
   selectedSprinklerHeadId: string | null;
+  hydrantPlacements: HydrantPlacement[];
+  selectedHydrantId: string | null;
   onSelect: (id: string | null) => void;
   onSelectPartition: (structureId: string, leafId: string) => void;
   onResizePartition: (structureId: string, splitId: string, ratio: number) => void;
   onSelectHeatDetector: (id: string | null) => void;
   onSelectExitLight: (id: string | null) => void;
   onSelectSprinklerHead: (id: string | null) => void;
+  onSelectHydrant: (id: string | null) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
   /** Non-null while "구조물 추가"/"출입구 추가" is armed: the canvas switches
    * from pan/select to draw-a-rectangle mode for this category. */
@@ -131,12 +136,15 @@ export default function FloorPlanCanvas({
   selectedExitLightId,
   sprinklerHeads,
   selectedSprinklerHeadId,
+  hydrantPlacements,
+  selectedHydrantId,
   onSelect,
   onSelectPartition,
   onResizePartition,
   onSelectHeatDetector,
   onSelectExitLight,
   onSelectSprinklerHead,
+  onSelectHydrant,
   onChange,
   pendingCategory,
   onConfirmStructure,
@@ -495,6 +503,7 @@ export default function FloorPlanCanvas({
             onSelectHeatDetector(null);
             onSelectExitLight(null);
             onSelectSprinklerHead(null);
+            onSelectHydrant(null);
           }
         }}
         onMouseMove={
@@ -565,6 +574,19 @@ export default function FloorPlanCanvas({
             onToggleSelect={onSelectSprinklerHead}
           />
         ))}
+        {hydrantPlacements.map((hydrant) => {
+          const owner = structures.find((s) => s.id === hydrant.structureId);
+          const structureLabel = owner ? getStructureLabel(owner) : "구조물";
+          return (
+            <HydrantShape
+              key={hydrant.id}
+              hydrant={hydrant}
+              structureLabel={structureLabel}
+              isSelected={hydrant.id === selectedHydrantId}
+              onToggleSelect={onSelectHydrant}
+            />
+          );
+        })}
         {drawRect && (
           <Rect
             x={drawRect.x}

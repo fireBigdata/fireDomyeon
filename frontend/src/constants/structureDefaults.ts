@@ -1,4 +1,4 @@
-import type { StructureType } from "@/types/floorplan";
+import type { FacilityType, StructureType } from "@/types/floorplan";
 
 export type StructureDefault = {
   label: string;
@@ -62,7 +62,26 @@ export const STRUCTURE_TYPE_ORDER: StructureType[] = [
   "obstacle",
 ];
 
-export const FACILITY_TYPE_LABELS: Record<string, string> = {
+export const FACILITY_TYPE_LABELS: Record<FacilityType, string> = {
   apartment: "아파트",
-  house: "주택",
+  villa: "빌라(연립·다세대주택)",
+  house: "단독주택",
+  commercial: "상가",
+  hospital: "병원",
+  school: "학교",
+  subway: "지하철역",
+  factory: "공장",
+  warehouse: "창고",
 };
+
+export const FACILITY_TYPE_ORDER: FacilityType[] = [
+  "apartment",
+  "villa",
+  "house",
+  "commercial",
+  "hospital",
+  "school",
+  "subway",
+  "factory",
+  "warehouse",
+];

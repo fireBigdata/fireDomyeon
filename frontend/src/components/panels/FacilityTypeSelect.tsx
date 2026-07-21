@@ -1,9 +1,7 @@
 "use client";
 
 import type { FacilityType } from "@/types/floorplan";
-import { FACILITY_TYPE_LABELS } from "@/constants/structureDefaults";
-
-const FACILITY_TYPES: FacilityType[] = ["apartment", "house"];
+import { FACILITY_TYPE_LABELS, FACILITY_TYPE_ORDER } from "@/constants/structureDefaults";
 
 type FacilityTypeSelectProps = {
   value: FacilityType;
@@ -24,7 +22,7 @@ export default function FacilityTypeSelect({
         onChange={(e) => onChange(e.target.value as FacilityType)}
         className="w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
       >
-        {FACILITY_TYPES.map((type) => (
+        {FACILITY_TYPE_ORDER.map((type) => (
           <option key={type} value={type}>
             {FACILITY_TYPE_LABELS[type]}
           </option>

@@ -3,11 +3,8 @@
 import type { FacilityType } from "@/types/floorplan";
 import type { EquipmentProduct } from "@/types/equipmentSelection";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
-
-const PANEL_FACILITY_LABELS: Record<FacilityType, string> = {
-  apartment: "아파트",
-  house: "아파트 외",
-};
+import { FACILITY_TYPE_LABELS } from "@/constants/structureDefaults";
+import { isResidentialUnitFacility } from "@/lib/facilityRules";
 
 type ExtinguisherPanelProps = {
   facilityType: FacilityType;
@@ -24,8 +21,8 @@ export default function ExtinguisherPanel({
   onAutoPlace,
   summary,
 }: ExtinguisherPanelProps) {
-  const isApartment = facilityType === "apartment";
-  const hasAbilityUnit = !isApartment ? (selectedProduct?.abilityUnit ?? 0) > 0 : true;
+  const isResidentialUnit = isResidentialUnitFacility(facilityType);
+  const hasAbilityUnit = !isResidentialUnit ? (selectedProduct?.abilityUnit ?? 0) > 0 : true;
   const canPlace = !!selectedProduct && hasAbilityUnit;
 
   return (
@@ -35,9 +32,9 @@ export default function ExtinguisherPanel({
       </label>
 
       <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-500">건물 유형</span>
+        <span className="text-gray-500">시설물 유형</span>
         <span className="font-medium text-gray-800">
-          {PANEL_FACILITY_LABELS[facilityType]}
+          {FACILITY_TYPE_LABELS[facilityType]}
         </span>
       </div>
 
@@ -47,7 +44,7 @@ export default function ExtinguisherPanel({
             <span className="text-gray-500">선택된 소화기</span>
             <span className="font-medium text-gray-800">{selectedProduct.name}</span>
           </div>
-          {!isApartment && (
+          {!isResidentialUnit && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">소화기 1개당 능력단위</span>
               <span className="font-medium text-gray-800">
@@ -74,7 +71,7 @@ export default function ExtinguisherPanel({
         소화기 자동 배치
       </button>
 
-      {summary && summary.facilityType === "house" && (
+      {summary && summary.kind === "area" && (
         <div className="text-xs text-gray-500">
           <p>전체 바닥면적: {summary.totalFloorArea.toFixed(1)}㎡</p>
           <p>소화기 1개당 능력단위: {summary.abilityUnitsPerExtinguisher}단위</p>
@@ -96,7 +93,7 @@ export default function ExtinguisherPanel({
         </div>
       )}
 
-      {summary && summary.facilityType === "apartment" && (
+      {summary && summary.kind === "residentialUnit" && (
         <div className="text-xs text-gray-500">
           <p>거실 설치 개수: {summary.livingRoomCount}개</p>
           <p>복도 설치 개수: {summary.corridorCount}개</p>
