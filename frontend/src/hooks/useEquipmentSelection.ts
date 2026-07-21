@@ -115,11 +115,12 @@ export function useEquipmentSelection(
   );
 
   // 내화구조로 시공하는 경우에만 발생하는 건축 비용(용도별 ㎡당 단가 ×
-  // 건물 전체 연면적) — see lib/facilityRules.ts.
+  // 건물 전체 연면적) — see lib/facilityRules.ts. 연면적(㎡)에 소수점이 있어도
+  // 금액은 원 단위 미만을 버림하여 정수 원으로 계산한다.
   const fireResistantConstructionCost = useMemo(() => {
     if (!floorPlanSummary?.isFireResistantStructure) return 0;
     const ratePerM2 = getFireResistantConstructionCostPerM2(floorPlanSummary.facilityType);
-    return ratePerM2 * floorPlanSummary.totalAreaSqm;
+    return Math.floor(ratePerM2 * floorPlanSummary.totalAreaSqm);
   }, [floorPlanSummary]);
 
   const totalCost = useMemo(
