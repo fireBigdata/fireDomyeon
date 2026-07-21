@@ -57,3 +57,29 @@ export function getExtinguisherAreaPerUnit(
 ): ExtinguisherAreaPerUnit {
   return EXTINGUISHER_AREA_PER_UNIT_M2[facilityType];
 }
+
+// ---------------------------------------------------------------------------
+// 내화구조(耐火構造) 건축비용 — 시설물 용도별 ㎡당 단가(사용자 제공 기준).
+// 이 앱의 FacilityType 9종 중 사용자가 제시한 용도 목록(공동주택/단독주택/
+// 사무소/상가/공장/창고/학교/병원/기타)에 정확히 대응하지 않는 두 항목은 다음
+// 기준으로 대응했다:
+// - villa(빌라, 연립·다세대주택)는 공동주택 그룹이므로 apartment와 동일 단가.
+// - subway(지하철역)는 제시된 목록에 없어 "기타" 단가를 적용했다 — 마침
+//   "사무소"도 "기타"와 같은 단가(200,000원/㎡)라 실질적으로 어느 쪽으로
+//   취급해도 결과는 같다.
+// ---------------------------------------------------------------------------
+export const FIRE_RESISTANT_CONSTRUCTION_COST_PER_M2: Record<FacilityType, number> = {
+  apartment: 100_000, // 공동주택
+  villa: 100_000, // 공동주택
+  house: 250_000, // 단독주택
+  commercial: 200_000, // 상가
+  hospital: 250_000, // 병원
+  school: 150_000, // 학교
+  subway: 200_000, // 목록에 없어 "기타" 단가 적용
+  factory: 250_000, // 공장
+  warehouse: 180_000, // 창고
+};
+
+export function getFireResistantConstructionCostPerM2(facilityType: FacilityType): number {
+  return FIRE_RESISTANT_CONSTRUCTION_COST_PER_M2[facilityType];
+}

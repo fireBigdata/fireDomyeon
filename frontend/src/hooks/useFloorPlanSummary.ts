@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import type { FloorPlanState } from "@/types/floorplan";
+import type { FacilityType, FloorPlanState } from "@/types/floorplan";
 import type { ExitLight, ExitLightCategory } from "@/types/exitLight";
 import type { HeatDetector } from "@/types/heatDetector";
 import { HeatDetectorType } from "@/types/heatDetector";
@@ -27,6 +27,9 @@ export type FloorEquipmentSummary = {
 };
 
 export type FloorPlanSummary = {
+  facilityType: FacilityType;
+  /** Whether the building is fire-resistant (내화구조) — see FloorPlanState.isFireResistantStructure. */
+  isFireResistantStructure: boolean;
   floorCount: number;
   totalAreaSqm: number;
   totalExtinguisherCount: number;
@@ -114,6 +117,8 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
   } as HeatDetectorTypeCounts;
 
   return {
+    facilityType: floorPlan.facilityType,
+    isFireResistantStructure: floorPlan.isFireResistantStructure ?? false,
     floorCount: floorPlan.floors.length,
     totalAreaSqm,
     totalExtinguisherCount: byFloor.reduce((sum, f) => sum + f.extinguisherCount, 0),

@@ -16,6 +16,7 @@ import type {
 import { NONE_PRODUCT_ID } from "@/types/equipmentSelection";
 import type { FloorPlanSummary } from "@/hooks/useFloorPlanSummary";
 import { getFloorPlanInstalledCount } from "@/lib/equipmentFloorPlanCounts";
+import { getFireResistantConstructionCostPerM2 } from "@/lib/facilityRules";
 
 function createInitialSelectionState(): EquipmentSelectionState {
   return EQUIPMENT_LIST.reduce((state, name) => {
@@ -104,7 +105,7 @@ export function useEquipmentSelection(
     }, {} as EquipmentSelectionSummary);
   }, [selection, quantities]);
 
-  const totalCost = useMemo(
+  const equipmentCost = useMemo(
     () =>
       EQUIPMENT_LIST.reduce(
         (sum, name) => sum + (summary[name].lineTotal ?? 0),
@@ -113,12 +114,27 @@ export function useEquipmentSelection(
     [summary]
   );
 
+  // 내화구조로 시공하는 경우에만 발생하는 건축 비용(용도별 ㎡당 단가 ×
+  // 건물 전체 연면적) — see lib/facilityRules.ts.
+  const fireResistantConstructionCost = useMemo(() => {
+    if (!floorPlanSummary?.isFireResistantStructure) return 0;
+    const ratePerM2 = getFireResistantConstructionCostPerM2(floorPlanSummary.facilityType);
+    return ratePerM2 * floorPlanSummary.totalAreaSqm;
+  }, [floorPlanSummary]);
+
+  const totalCost = useMemo(
+    () => equipmentCost + fireResistantConstructionCost,
+    [equipmentCost, fireResistantConstructionCost]
+  );
+
   return {
     selection,
     quantities,
     selectProduct,
     setQuantity,
     summary,
+    equipmentCost,
+    fireResistantConstructionCost,
     totalCost,
   };
 }
