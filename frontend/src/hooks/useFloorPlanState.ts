@@ -1,21 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type {
-  EntranceType,
-  ExtinguisherPlacement,
-  FacilityType,
-  Floor,
-  FloorPlanState,
-  HeatDetector,
-  PartitionDirection,
-  RoomType,
-  SprinklerHazardClass,
-  SprinklerHead,
-  Structure,
-  StructureType,
+import {
+  HeatDetectorType,
+  SprinklerHeadType,
+  type EntranceType,
+  type ExtinguisherPlacement,
+  type FacilityType,
+  type Floor,
+  type FloorPlanState,
+  type HeatDetector,
+  type PartitionDirection,
+  type RoomType,
+  type SprinklerHazardClass,
+  type SprinklerHead,
+  type Structure,
+  type StructureType,
 } from "@/types/floorplan";
-import type { ExitLight } from "@/types/exitLight";
+import type { ExitLight, ExitLightCategory } from "@/types/exitLight";
 import { createStructure } from "@/lib/structureFactory";
 import type { StructureRect } from "@/lib/structureFactory";
 import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
@@ -48,9 +50,21 @@ function createFreshState(): FloorPlanState {
   };
 }
 
+const VALID_HEAT_DETECTOR_TYPES = new Set<string>(Object.values(HeatDetectorType));
+const VALID_SPRINKLER_HEAD_TYPES = new Set<string>(Object.values(SprinklerHeadType));
+const VALID_EXIT_LIGHT_CATEGORIES = new Set<ExitLightCategory>([
+  "EXIT",
+  "CORRIDOR",
+  "STAIRS",
+]);
+
 // Backfills array fields a floor may be missing if it was saved by an older
-// version of the app (e.g. before sprinklerHeads existed), so consumers like
-// FloorPlanCanvas can always safely .map() over them.
+// version of the app (e.g. before sprinklerHeads existed), and drops any
+// equipment whose discriminant (type/headType/category) no longer matches a
+// known value — the canvas shapes (HeatDetectorShape, SprinklerHeadShape,
+// ExitLightShape) look up colors/labels by that field via a Record and crash
+// on an unrecognized one, so a stale/renamed value must be filtered here
+// rather than trusted as-is.
 function normalizeFloor(floor: Partial<Floor>): Floor {
   return {
     id: floor.id ?? createFloor("1F").id,
@@ -59,9 +73,15 @@ function normalizeFloor(floor: Partial<Floor>): Floor {
     extinguisherPlacements: Array.isArray(floor.extinguisherPlacements)
       ? floor.extinguisherPlacements
       : [],
-    heatDetectors: Array.isArray(floor.heatDetectors) ? floor.heatDetectors : [],
-    exitLights: Array.isArray(floor.exitLights) ? floor.exitLights : [],
-    sprinklerHeads: Array.isArray(floor.sprinklerHeads) ? floor.sprinklerHeads : [],
+    heatDetectors: Array.isArray(floor.heatDetectors)
+      ? floor.heatDetectors.filter((d) => VALID_HEAT_DETECTOR_TYPES.has(d?.type))
+      : [],
+    exitLights: Array.isArray(floor.exitLights)
+      ? floor.exitLights.filter((l) => VALID_EXIT_LIGHT_CATEGORIES.has(l?.category))
+      : [],
+    sprinklerHeads: Array.isArray(floor.sprinklerHeads)
+      ? floor.sprinklerHeads.filter((h) => VALID_SPRINKLER_HEAD_TYPES.has(h?.headType))
+      : [],
   };
 }
 
