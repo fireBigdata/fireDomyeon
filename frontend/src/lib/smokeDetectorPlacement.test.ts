@@ -6,6 +6,7 @@ import {
   CORRIDOR_SMOKE_SPACING_METERS,
   STAIRS_SMOKE_SPACING_METERS,
 } from "@/lib/smokeDetectorPlacement";
+import { RoomType } from "@/types/floorplan";
 import type { Floor, Structure } from "@/types/floorplan";
 
 function makeStructure(overrides: Partial<Structure> = {}): Structure {
@@ -56,7 +57,7 @@ describe("autoPlaceSmokeDetectors", () => {
     const corridor = makeStructure({ id: "corridor-1", x: 0, y: 0, width: 1860, height: 50 });
     const floor = makeFloor([corridor]);
 
-    const detectors = autoPlaceSmokeDetectors(floor, 1);
+    const detectors = autoPlaceSmokeDetectors(floor, 1, "commercial", 150);
 
     expect(detectors).toHaveLength(3);
     expect(detectors.every((d) => d.category === "CORRIDOR")).toBe(true);
@@ -70,7 +71,7 @@ describe("autoPlaceSmokeDetectors", () => {
     const stairs = makeStructure({ id: "stairs-1", type: "stairs", x: 0, y: 0, width: 930, height: 90 });
     const floor = makeFloor([stairs]);
 
-    const detectors = autoPlaceSmokeDetectors(floor, 1);
+    const detectors = autoPlaceSmokeDetectors(floor, 1, "commercial", 150);
 
     expect(detectors).toHaveLength(3);
     expect(detectors.every((d) => d.category === "STAIRS")).toBe(true);
@@ -80,7 +81,7 @@ describe("autoPlaceSmokeDetectors", () => {
     const elevator = makeStructure({ id: "elevator-1", type: "elevator", x: 0, y: 0, width: 80, height: 80 });
     const floor = makeFloor([elevator]);
 
-    const detectors = autoPlaceSmokeDetectors(floor, 1);
+    const detectors = autoPlaceSmokeDetectors(floor, 1, "commercial", 150);
 
     expect(detectors).toHaveLength(1);
     expect(detectors[0].category).toBe("ELEVATOR");
@@ -94,7 +95,7 @@ describe("autoPlaceSmokeDetectors", () => {
     const obstacle = makeStructure({ id: "obs-1", type: "obstacle", x: 30, y: 30, width: 20, height: 20 });
     const floor = makeFloor([elevator, obstacle]);
 
-    const [detector] = autoPlaceSmokeDetectors(floor, 1);
+    const [detector] = autoPlaceSmokeDetectors(floor, 1, "commercial", 150);
 
     const insideObstacle =
       detector.x > obstacle.x &&
@@ -112,7 +113,7 @@ describe("autoPlaceSmokeDetectors", () => {
       makeStructure({ id: "elevator-1", type: "elevator", x: 300, y: 300, width: 80, height: 80 }),
     ]);
 
-    const detectors = autoPlaceSmokeDetectors(floor, 1);
+    const detectors = autoPlaceSmokeDetectors(floor, 1, "commercial", 150);
     const summary = summarizeSmokeDetectors(detectors);
 
     expect(summary.corridorCount).toBeGreaterThanOrEqual(1);
@@ -126,7 +127,47 @@ describe("autoPlaceSmokeDetectors", () => {
 
   it("returns nothing for a floor with no corridor/stairs/elevator structures", () => {
     const floor = makeFloor([makeStructure({ id: "room-1", type: "room" })]);
-    expect(autoPlaceSmokeDetectors(floor, 1)).toHaveLength(0);
+    expect(autoPlaceSmokeDetectors(floor, 1, "commercial", 150)).toHaveLength(0);
+  });
+
+  it("places one detector per bedroom/living room when room area is within the coverage area (NFTC 608 2.7.1.3)", () => {
+    // scale=1 -> PIXELS_PER_METER(30)^2 px^2/m^2; 120x100px room = 4000px^2 = 4000/900 m^2 ≈ 4.4m^2, well under 150m^2.
+    const floor = makeFloor([
+      makeStructure({ id: "bedroom-1", type: "room", roomType: RoomType.BEDROOM, x: 0, y: 0, width: 120, height: 100 }),
+      makeStructure({ id: "living-1", type: "room", roomType: RoomType.LIVING, x: 200, y: 0, width: 120, height: 100 }),
+      makeStructure({ id: "kitchen-1", type: "room", roomType: RoomType.KITCHEN, x: 400, y: 0, width: 120, height: 100 }),
+    ]);
+
+    for (const facilityType of ["apartment", "villa"] as const) {
+      const detectors = autoPlaceSmokeDetectors(floor, 1, facilityType, 150);
+      const summary = summarizeSmokeDetectors(detectors);
+
+      expect(summary.roomCount).toBe(2);
+      expect(detectors.some((d) => d.structureId === "bedroom-1" && d.category === "ROOM")).toBe(true);
+      expect(detectors.some((d) => d.structureId === "living-1" && d.category === "ROOM")).toBe(true);
+      expect(detectors.some((d) => d.structureId === "kitchen-1")).toBe(false);
+    }
+  });
+
+  it("places multiple detectors in a bedroom/living room once its area exceeds the coverage area", () => {
+    // PIXELS_PER_METER = 30, so a 900x900px room is 30m x 30m = 900m^2 -> ceil(900/150) = 6.
+    const floor = makeFloor([
+      makeStructure({ id: "living-1", type: "room", roomType: RoomType.LIVING, x: 0, y: 0, width: 900, height: 900 }),
+    ]);
+
+    const detectors = autoPlaceSmokeDetectors(floor, 1, "apartment", 150);
+    const roomDetectors = detectors.filter((d) => d.structureId === "living-1");
+
+    expect(roomDetectors).toHaveLength(6);
+  });
+
+  it("does not place room detectors for non-residential facility types", () => {
+    const floor = makeFloor([
+      makeStructure({ id: "bedroom-1", type: "room", roomType: RoomType.BEDROOM, x: 0, y: 0, width: 120, height: 100 }),
+    ]);
+
+    const detectors = autoPlaceSmokeDetectors(floor, 1, "house", 150);
+    expect(detectors).toHaveLength(0);
   });
 });
 
@@ -137,13 +178,15 @@ describe("summarizeSmokeDetectors", () => {
       { id: "2", floorId: "f", structureId: "s", category: "CORRIDOR" as const, x: 0, y: 0, isAutoPlaced: true },
       { id: "3", floorId: "f", structureId: "s", category: "STAIRS" as const, x: 0, y: 0, isAutoPlaced: true },
       { id: "4", floorId: "f", structureId: "s", category: "ELEVATOR" as const, x: 0, y: 0, isAutoPlaced: true },
+      { id: "5", floorId: "f", structureId: "s", category: "ROOM" as const, x: 0, y: 0, isAutoPlaced: true },
     ];
     const summary = summarizeSmokeDetectors(detectors);
     expect(summary).toEqual({
       corridorCount: 2,
       stairsCount: 1,
       elevatorCount: 1,
-      totalCount: 4,
+      roomCount: 1,
+      totalCount: 5,
     });
   });
 });

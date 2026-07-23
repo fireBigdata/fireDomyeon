@@ -1,5 +1,6 @@
-// 복도·통로(CORRIDOR) / 계단·경사로(STAIRS) / 승강로(ELEVATOR)
-export type SmokeDetectorCategory = "CORRIDOR" | "STAIRS" | "ELEVATOR";
+// 복도·통로(CORRIDOR) / 계단·경사로(STAIRS) / 승강로(ELEVATOR) /
+// 공동주택 세대 내 침실·거실(ROOM, NFTC 608 2.7.1.3)
+export type SmokeDetectorCategory = "CORRIDOR" | "STAIRS" | "ELEVATOR" | "ROOM";
 
 export interface SmokeDetector {
   id: string;

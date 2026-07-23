@@ -103,6 +103,7 @@ export default function Home() {
   const selectedDifferentialDetectorProduct = useSelectedEquipmentProduct("차동식열감지기");
   const selectedFixedTemperatureDetectorProduct = useSelectedEquipmentProduct("정온식열감지기");
   const selectedHydrantProduct = useSelectedEquipmentProduct("옥내소화전");
+  const selectedSmokeDetectorProduct = useSelectedEquipmentProduct("연기감지기");
 
   const {
     error: extinguisherError,
@@ -123,6 +124,7 @@ export default function Home() {
     autoPlace: autoPlaceHeatDetectors,
   } = useHeatDetectorPlacement(
     currentFloor,
+    state.facilityType,
     state.scale,
     selectedDifferentialDetectorProduct,
     selectedFixedTemperatureDetectorProduct,
@@ -133,8 +135,17 @@ export default function Home() {
   const { summary: exitLightSummary, autoPlace: autoPlaceExitLights } =
     useExitLightPlacement(currentFloor, state.scale, setExitLights);
 
-  const { summary: smokeDetectorSummary, autoPlace: autoPlaceSmokeDetectors } =
-    useSmokeDetectorPlacement(currentFloor, state.scale, setSmokeDetectors);
+  const {
+    error: smokeDetectorError,
+    summary: smokeDetectorSummary,
+    autoPlace: autoPlaceSmokeDetectors,
+  } = useSmokeDetectorPlacement(
+    currentFloor,
+    state.facilityType,
+    state.scale,
+    selectedSmokeDetectorProduct,
+    setSmokeDetectors
+  );
 
   const { summary: sprinklerSummary, autoPlace: autoPlaceSprinklers } = useSprinklerPlacement(
     currentFloor,
@@ -204,6 +215,8 @@ export default function Home() {
           heatDetectorSummary={heatDetectorSummary}
           onAutoPlaceExitLights={autoPlaceExitLights}
           exitLightSummary={exitLightSummary}
+          selectedSmokeDetectorProduct={selectedSmokeDetectorProduct}
+          smokeDetectorError={smokeDetectorError}
           onAutoPlaceSmokeDetectors={autoPlaceSmokeDetectors}
           smokeDetectorSummary={smokeDetectorSummary}
           isFireResistantStructure={state.isFireResistantStructure ?? false}

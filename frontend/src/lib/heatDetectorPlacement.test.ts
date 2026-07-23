@@ -218,7 +218,7 @@ describe("autoPlaceHeatDetectors", () => {
     ]);
 
     // PIXELS_PER_METER = 30, so a 90x90 room is 9m², a 300x300 room is 100m².
-    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1, "commercial");
 
     const livingDetectors = detectors.filter((d) => d.roomId === "living");
     const kitchenDetectors = detectors.filter((d) => d.roomId === "kitchen");
@@ -231,8 +231,8 @@ describe("autoPlaceHeatDetectors", () => {
 
   it("throws instead of silently computing anything for an invalid coverage area", () => {
     const floor = makeFloor([makeRoom()]);
-    expect(() => autoPlaceHeatDetectors(floor, uniformCoverage(0), 1)).toThrow();
-    expect(() => autoPlaceHeatDetectors(floor, uniformCoverage(-1), 1)).toThrow();
+    expect(() => autoPlaceHeatDetectors(floor, uniformCoverage(0), 1, "commercial")).toThrow();
+    expect(() => autoPlaceHeatDetectors(floor, uniformCoverage(-1), 1, "commercial")).toThrow();
   });
 
   it("ignores non-room structures", () => {
@@ -240,7 +240,7 @@ describe("autoPlaceHeatDetectors", () => {
       makeRoom({ id: "room-a" }),
       { id: "corridor-a", type: "corridor", x: 0, y: 0, width: 200, height: 50 },
     ]);
-    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1, "commercial");
     expect(detectors.every((d) => d.roomId === "room-a")).toBe(true);
   });
 
@@ -250,7 +250,7 @@ describe("autoPlaceHeatDetectors", () => {
     const obstacle: Structure = { id: "obs-1", type: "obstacle", x: 35, y: 35, width: 20, height: 20 };
     const floor = makeFloor([room, obstacle]);
 
-    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1, "commercial");
     const livingDetectors = detectors.filter((d) => d.roomId === "living");
 
     expect(livingDetectors).toHaveLength(1);
@@ -272,7 +272,7 @@ describe("autoPlaceHeatDetectors", () => {
       makeRoom({ id: "untyped", x: 800 }),
     ]);
 
-    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1);
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1, "commercial");
     const typeByRoom = (roomId: string) =>
       detectors.find((d) => d.roomId === roomId)?.type;
 
@@ -281,5 +281,33 @@ describe("autoPlaceHeatDetectors", () => {
     expect(typeByRoom("boiler")).toBe(HeatDetectorType.FIXED_TEMPERATURE);
     expect(typeByRoom("bedroom")).toBe(HeatDetectorType.DIFFERENTIAL);
     expect(typeByRoom("untyped")).toBe(HeatDetectorType.DIFFERENTIAL);
+  });
+
+  it("skips bedroom/living rooms for apartment/villa (NFTC 608 2.7.1.3 assigns those to smoke detectors instead), but still covers kitchen/boiler", () => {
+    const floor = makeFloor([
+      makeRoom({ id: "living", roomType: RoomType.LIVING }),
+      makeRoom({ id: "bedroom", x: 200, roomType: RoomType.BEDROOM }),
+      makeRoom({ id: "kitchen", x: 400, roomType: RoomType.KITCHEN }),
+      makeRoom({ id: "boiler", x: 600, roomType: RoomType.BOILER }),
+    ]);
+
+    for (const facilityType of ["apartment", "villa"] as const) {
+      const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1, facilityType);
+      expect(detectors.some((d) => d.roomId === "living")).toBe(false);
+      expect(detectors.some((d) => d.roomId === "bedroom")).toBe(false);
+      expect(detectors.some((d) => d.roomId === "kitchen")).toBe(true);
+      expect(detectors.some((d) => d.roomId === "boiler")).toBe(true);
+    }
+  });
+
+  it("does not skip bedroom/living rooms for non-residential facility types", () => {
+    const floor = makeFloor([
+      makeRoom({ id: "living", roomType: RoomType.LIVING }),
+      makeRoom({ id: "bedroom", x: 200, roomType: RoomType.BEDROOM }),
+    ]);
+
+    const detectors = autoPlaceHeatDetectors(floor, uniformCoverage(20), 1, "house");
+    expect(detectors.some((d) => d.roomId === "living")).toBe(true);
+    expect(detectors.some((d) => d.roomId === "bedroom")).toBe(true);
   });
 });

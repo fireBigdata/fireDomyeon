@@ -35,6 +35,8 @@ type LeftPanelProps = {
   heatDetectorSummary: HeatDetectorSummary | null;
   onAutoPlaceExitLights: () => void;
   exitLightSummary: ExitLightSummary | null;
+  selectedSmokeDetectorProduct: EquipmentProduct | null;
+  smokeDetectorError: string | null;
   onAutoPlaceSmokeDetectors: () => void;
   smokeDetectorSummary: SmokeDetectorSummary | null;
   isFireResistantStructure: boolean;
@@ -64,6 +66,8 @@ export default function LeftPanel({
   heatDetectorSummary,
   onAutoPlaceExitLights,
   exitLightSummary,
+  selectedSmokeDetectorProduct,
+  smokeDetectorError,
   onAutoPlaceSmokeDetectors,
   smokeDetectorSummary,
   isFireResistantStructure,
@@ -100,7 +104,12 @@ export default function LeftPanel({
         summary={heatDetectorSummary}
       />
       <ExitLightPanel onAutoPlace={onAutoPlaceExitLights} summary={exitLightSummary} />
-      <SmokeDetectorPanel onAutoPlace={onAutoPlaceSmokeDetectors} summary={smokeDetectorSummary} />
+      <SmokeDetectorPanel
+        selectedProduct={selectedSmokeDetectorProduct}
+        error={smokeDetectorError}
+        onAutoPlace={onAutoPlaceSmokeDetectors}
+        summary={smokeDetectorSummary}
+      />
       <SprinklerPanel onAutoPlace={onAutoPlaceSprinklers} summary={sprinklerSummary} />
       <HydrantPanel
         selectedProduct={selectedHydrantProduct}

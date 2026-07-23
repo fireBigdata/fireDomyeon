@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type { Floor, HeatDetector } from "@/types/floorplan";
+import type { FacilityType, Floor, HeatDetector } from "@/types/floorplan";
 import type { EquipmentProduct } from "@/types/equipmentSelection";
 import { HeatDetectorType } from "@/types/heatDetector";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
@@ -34,6 +34,7 @@ const NO_ABILITY_UNIT_MESSAGE =
 
 export function useHeatDetectorPlacement(
   floor: Floor,
+  facilityType: FacilityType,
   scale: number,
   differentialProduct: EquipmentProduct | null,
   fixedTemperatureProduct: EquipmentProduct | null,
@@ -70,7 +71,7 @@ export function useHeatDetectorPlacement(
       ),
     };
 
-    const detectors = autoPlaceHeatDetectors(floor, coverageAreaByType, scale);
+    const detectors = autoPlaceHeatDetectors(floor, coverageAreaByType, scale, facilityType);
 
     const rooms = floor.structures.filter((s) => s.type === "room");
     const totalArea = rooms.reduce(
@@ -93,6 +94,7 @@ export function useHeatDetectorPlacement(
     fixedTemperatureProduct,
     isFireResistantStructure,
     floor,
+    facilityType,
     scale,
     onPlaced,
   ]);

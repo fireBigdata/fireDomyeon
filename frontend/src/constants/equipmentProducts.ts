@@ -39,6 +39,12 @@ export { NONE_PRODUCT_ID } from "@/types/equipmentSelection";
  * "부착높이 4m 미만·기타구조·2종" 값을 모든 모델에 균일 적용한 근사값입니다(차동식=40㎡,
  * 정온식=15㎡). 카탈로그에 종별(1종/2종/특종)이나 내화구조 여부가 표기돼 있지 않아 모델별로
  * 세분화하지 않았습니다. 실제 형식승인서/설치 조건이 확보되면 해당 모델·조건 값으로 교체해주세요.
+ *
+ * 연기감지기의 abilityUnit(보호면적, ㎡)도 연기감지기 자동 배치(useSmokeDetectorPlacement,
+ * 공동주택 세대 내 침실·거실 항목)가 실제로 계산에 사용합니다 — NFTC 203 표 2.4.3.5(연기감지기
+ * 바닥면적) 중 "부착높이 4m 미만·2종" 값(150㎡)을 모든 모델에 균일 적용한 근사값입니다. 카탈로그에
+ * 종별(1종/2종/3종)이나 부착높이가 표기돼 있지 않아 모델별로 세분화하지 않았습니다. 실제
+ * 형식승인서/설치 조건이 확보되면 해당 모델·조건 값으로 교체해주세요.
  */
 export const IS_MOCK_EQUIPMENT_DATA = true;
 
@@ -625,7 +631,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 6600,
       image: "/images/equipment/smoke-1.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-2",
@@ -634,7 +640,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 7150,
       image: "/images/equipment/smoke-2.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-3",
@@ -643,7 +649,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 12650,
       image: "/images/equipment/smoke-3.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-4",
@@ -652,7 +658,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 14300,
       image: "/images/equipment/smoke-4.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-5",
@@ -661,7 +667,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 16500,
       image: "/images/equipment/smoke-5.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-6",
@@ -670,7 +676,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 12650,
       image: "/images/equipment/smoke-6.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-7",
@@ -679,7 +685,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 13200,
       image: "/images/equipment/smoke-7.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-8",
@@ -688,7 +694,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 6930,
       image: "/images/equipment/smoke-8.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-9",
@@ -697,7 +703,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 7500,
       image: "/images/equipment/smoke-9.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
     {
       id: "smoke-10",
@@ -706,7 +712,7 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
       icon: "💨",
       price: 41900,
       image: "/images/equipment/smoke-10.jpg",
-      abilityUnit: null,
+      abilityUnit: 150,
     },
   ],
   비상구유도등: [
