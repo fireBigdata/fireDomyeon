@@ -1,6 +1,8 @@
 "use client";
 
 import { EXIT_LIGHT_CATEGORY_DEFAULTS, EXIT_LIGHT_CATEGORY_ORDER } from "@/constants/exitLight";
+import { HEAT_DETECTOR_TYPE_LABELS } from "@/constants/heatDetectorTypes";
+import { HeatDetectorType } from "@/types/heatDetector";
 import type { FloorPlanSummary } from "@/hooks/useFloorPlanSummary";
 
 type FloorPlanSummaryPanelProps = {
@@ -22,7 +24,8 @@ export default function FloorPlanSummaryPanel({
     floorCount,
     totalAreaSqm,
     totalExtinguisherCount,
-    totalHeatDetectorCount,
+    totalHeatDetectorCountsByType,
+    totalSmokeDetectorCount,
     totalExitLightCountsByCategory,
     byFloor,
   } = summary;
@@ -38,7 +41,15 @@ export default function FloorPlanSummaryPanel({
           value={`${Math.round(totalAreaSqm).toLocaleString()}㎡`}
         />
         <SummaryStat label="전체 소화기" value={`${totalExtinguisherCount}개`} />
-        <SummaryStat label="전체 감지기" value={`${totalHeatDetectorCount}개`} />
+        <SummaryStat
+          label={`전체 ${HEAT_DETECTOR_TYPE_LABELS[HeatDetectorType.DIFFERENTIAL]} 열감지기`}
+          value={`${totalHeatDetectorCountsByType[HeatDetectorType.DIFFERENTIAL]}개`}
+        />
+        <SummaryStat
+          label={`전체 ${HEAT_DETECTOR_TYPE_LABELS[HeatDetectorType.FIXED_TEMPERATURE]} 열감지기`}
+          value={`${totalHeatDetectorCountsByType[HeatDetectorType.FIXED_TEMPERATURE]}개`}
+        />
+        <SummaryStat label="전체 연기 감지기" value={`${totalSmokeDetectorCount}개`} />
         {EXIT_LIGHT_CATEGORY_ORDER.map((category) => (
           <SummaryStat
             key={category}
@@ -51,12 +62,18 @@ export default function FloorPlanSummaryPanel({
       <div className="flex flex-col gap-2">
         <h3 className="text-xs font-medium text-gray-500">층별 설비 수량</h3>
         <div className="max-h-64 overflow-y-auto overflow-x-auto rounded-md border border-gray-100">
-          <table className="w-full min-w-[480px] text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="border-b border-gray-200 text-xs text-gray-500">
                 <th className="px-3 py-1.5 font-medium">층</th>
                 <th className="px-3 py-1.5 font-medium">소화기</th>
-                <th className="px-3 py-1.5 font-medium">감지기</th>
+                <th className="px-3 py-1.5 font-medium">
+                  {HEAT_DETECTOR_TYPE_LABELS[HeatDetectorType.DIFFERENTIAL]} 열감지기
+                </th>
+                <th className="px-3 py-1.5 font-medium">
+                  {HEAT_DETECTOR_TYPE_LABELS[HeatDetectorType.FIXED_TEMPERATURE]} 열감지기
+                </th>
+                <th className="px-3 py-1.5 font-medium">연기 감지기</th>
                 {EXIT_LIGHT_CATEGORY_ORDER.map((category) => (
                   <th key={category} className="px-3 py-1.5 font-medium">
                     {EXIT_LIGHT_CATEGORY_DEFAULTS[category].label}
@@ -77,7 +94,13 @@ export default function FloorPlanSummaryPanel({
                     {floor.extinguisherCount}개
                   </td>
                   <td className="px-3 py-1.5 text-gray-600">
-                    {floor.heatDetectorCount}개
+                    {floor.heatDetectorCountsByType[HeatDetectorType.DIFFERENTIAL]}개
+                  </td>
+                  <td className="px-3 py-1.5 text-gray-600">
+                    {floor.heatDetectorCountsByType[HeatDetectorType.FIXED_TEMPERATURE]}개
+                  </td>
+                  <td className="px-3 py-1.5 text-gray-600">
+                    {floor.smokeDetectorCount}개
                   </td>
                   {EXIT_LIGHT_CATEGORY_ORDER.map((category) => (
                     <td key={category} className="px-3 py-1.5 text-gray-600">

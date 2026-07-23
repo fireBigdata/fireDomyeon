@@ -1,6 +1,7 @@
 import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { HeatDetector } from "@/types/heatDetector";
 import type { ExitLight } from "@/types/exitLight";
+import type { SmokeDetector } from "@/types/smokeDetector";
 import { SprinklerHazardClass } from "@/types/sprinkler";
 import type { SprinklerHead } from "@/types/sprinkler";
 import type { HydrantPlacement } from "@/types/hydrant";
@@ -107,6 +108,7 @@ export type Floor = {
   extinguisherPlacements: ExtinguisherPlacement[];
   heatDetectors: HeatDetector[];
   exitLights: ExitLight[];
+  smokeDetectors: SmokeDetector[];
   sprinklerHeads: SprinklerHead[];
   hydrantPlacements: HydrantPlacement[];
 };
@@ -131,11 +133,19 @@ export type FloorPlanState = {
   selectedPartitionId: string | null;
   selectedHeatDetectorId: string | null;
   selectedExitLightId: string | null;
+  selectedSmokeDetectorId: string | null;
   selectedSprinklerHeadId: string | null;
   selectedHydrantId: string | null;
   scale: number;
 };
 
-export type { ExtinguisherPlacement, HeatDetector, ExitLight, SprinklerHead, HydrantPlacement };
+export type {
+  ExtinguisherPlacement,
+  HeatDetector,
+  ExitLight,
+  SmokeDetector,
+  SprinklerHead,
+  HydrantPlacement,
+};
 export { HeatDetectorType } from "@/types/heatDetector";
 export { SprinklerHazardClass, SprinklerHeadType, SprinklerComplianceStatus } from "@/types/sprinkler";

@@ -205,6 +205,7 @@ describe("autoPlaceHeatDetectors", () => {
       extinguisherPlacements: [],
       heatDetectors: [],
       exitLights: [],
+      smokeDetectors: [],
       sprinklerHeads: [],
       hydrantPlacements: [],
     };

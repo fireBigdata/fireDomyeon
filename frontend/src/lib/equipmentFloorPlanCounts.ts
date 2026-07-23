@@ -9,9 +9,9 @@ const DEFAULT_QUANTITY = 0;
  * Total installed count for `name` from the floor plan drawing page, used as
  * the equipment-selection page's default product quantity. Only equipment
  * types that are actually placed on the drawing (extinguishers, heat
- * detectors, exit lights, sprinkler heads, indoor hydrants) have real counts;
- * everything else falls back to DEFAULT_QUANTITY since the drawing page has
- * no placement data for it yet.
+ * detectors, smoke detectors, exit lights, sprinkler heads, indoor hydrants)
+ * have real counts; everything else falls back to DEFAULT_QUANTITY since the
+ * drawing page has no placement data for it yet.
  */
 export function getFloorPlanInstalledCount(
   name: EquipmentName,
@@ -35,6 +35,8 @@ export function getFloorPlanInstalledCount(
           HeatDetectorType.FIXED_TEMPERATURE
         ] || DEFAULT_QUANTITY
       );
+    case "연기감지기":
+      return summary.totalSmokeDetectorCount || DEFAULT_QUANTITY;
     case "비상구유도등":
       return summary.totalExitLightCountsByCategory.EXIT || DEFAULT_QUANTITY;
     case "복도통로유도등":

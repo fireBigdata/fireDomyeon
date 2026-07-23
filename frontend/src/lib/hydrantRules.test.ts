@@ -24,6 +24,7 @@ function makeFloorWithArea(id: string, areaM2: number): Floor {
     extinguisherPlacements: [],
     heatDetectors: [],
     exitLights: [],
+    smokeDetectors: [],
     sprinklerHeads: [],
     hydrantPlacements: [],
   };

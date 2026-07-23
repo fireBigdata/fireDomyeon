@@ -13,6 +13,7 @@ import type {
   StructureType,
 } from "@/types/floorplan";
 import type { ExitLight } from "@/types/exitLight";
+import type { SmokeDetector } from "@/types/smokeDetector";
 import type { HydrantPlacement } from "@/types/hydrant";
 import type { StructureRect } from "@/lib/structureFactory";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
@@ -27,6 +28,7 @@ import { detectEntranceOrientation, getEntrancePreviewRect } from "@/lib/entranc
 import StructureShape from "./StructureShape";
 import HeatDetectorShape from "./HeatDetectorShape";
 import ExitLightShape from "./ExitLightShape";
+import SmokeDetectorShape from "./SmokeDetectorShape";
 import SprinklerHeadShape from "./SprinklerHeadShape";
 import HydrantShape from "./HydrantShape";
 import StructureTypeChoiceOverlay from "./StructureTypeChoiceOverlay";
@@ -99,6 +101,8 @@ type FloorPlanCanvasProps = {
   selectedHeatDetectorId: string | null;
   exitLights: ExitLight[];
   selectedExitLightId: string | null;
+  smokeDetectors: SmokeDetector[];
+  selectedSmokeDetectorId: string | null;
   sprinklerHeads: SprinklerHead[];
   selectedSprinklerHeadId: string | null;
   hydrantPlacements: HydrantPlacement[];
@@ -108,6 +112,7 @@ type FloorPlanCanvasProps = {
   onResizePartition: (structureId: string, splitId: string, ratio: number) => void;
   onSelectHeatDetector: (id: string | null) => void;
   onSelectExitLight: (id: string | null) => void;
+  onSelectSmokeDetector: (id: string | null) => void;
   onSelectSprinklerHead: (id: string | null) => void;
   onSelectHydrant: (id: string | null) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
@@ -134,6 +139,8 @@ export default function FloorPlanCanvas({
   selectedHeatDetectorId,
   exitLights,
   selectedExitLightId,
+  smokeDetectors,
+  selectedSmokeDetectorId,
   sprinklerHeads,
   selectedSprinklerHeadId,
   hydrantPlacements,
@@ -143,6 +150,7 @@ export default function FloorPlanCanvas({
   onResizePartition,
   onSelectHeatDetector,
   onSelectExitLight,
+  onSelectSmokeDetector,
   onSelectSprinklerHead,
   onSelectHydrant,
   onChange,
@@ -502,6 +510,7 @@ export default function FloorPlanCanvas({
             onSelect(null);
             onSelectHeatDetector(null);
             onSelectExitLight(null);
+            onSelectSmokeDetector(null);
             onSelectSprinklerHead(null);
             onSelectHydrant(null);
           }
@@ -563,6 +572,19 @@ export default function FloorPlanCanvas({
               structureLabel={structureLabel}
               isSelected={light.id === selectedExitLightId}
               onToggleSelect={onSelectExitLight}
+            />
+          );
+        })}
+        {smokeDetectors.map((detector) => {
+          const owner = structures.find((s) => s.id === detector.structureId);
+          const structureLabel = owner ? getStructureLabel(owner) : "구조물";
+          return (
+            <SmokeDetectorShape
+              key={detector.id}
+              detector={detector}
+              structureLabel={structureLabel}
+              isSelected={detector.id === selectedSmokeDetectorId}
+              onToggleSelect={onSelectSmokeDetector}
             />
           );
         })}

@@ -7,6 +7,7 @@ import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
 import { useSelectedEquipmentProduct } from "@/hooks/useSelectedEquipmentProduct";
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
 import { useExitLightPlacement } from "@/hooks/useExitLightPlacement";
+import { useSmokeDetectorPlacement } from "@/hooks/useSmokeDetectorPlacement";
 import { useSprinklerPlacement } from "@/hooks/useSprinklerPlacement";
 import { useHydrantPlacement } from "@/hooks/useHydrantPlacement";
 import { saveFloorPlanStateToStorage } from "@/lib/floorPlanStorage";
@@ -55,6 +56,8 @@ export default function Home() {
     setHeatDetectors,
     selectExitLight,
     setExitLights,
+    selectSmokeDetector,
+    setSmokeDetectors,
     selectSprinklerHead,
     setSprinklerHeads,
     selectHydrant,
@@ -130,6 +133,9 @@ export default function Home() {
   const { summary: exitLightSummary, autoPlace: autoPlaceExitLights } =
     useExitLightPlacement(currentFloor, state.scale, setExitLights);
 
+  const { summary: smokeDetectorSummary, autoPlace: autoPlaceSmokeDetectors } =
+    useSmokeDetectorPlacement(currentFloor, state.scale, setSmokeDetectors);
+
   const { summary: sprinklerSummary, autoPlace: autoPlaceSprinklers } = useSprinklerPlacement(
     currentFloor,
     state.facilityType,
@@ -155,6 +161,7 @@ export default function Home() {
     autoPlaceExtinguishers();
     autoPlaceHeatDetectors();
     autoPlaceExitLights();
+    autoPlaceSmokeDetectors();
     autoPlaceSprinklers();
     autoPlaceHydrants();
   };
@@ -197,6 +204,8 @@ export default function Home() {
           heatDetectorSummary={heatDetectorSummary}
           onAutoPlaceExitLights={autoPlaceExitLights}
           exitLightSummary={exitLightSummary}
+          onAutoPlaceSmokeDetectors={autoPlaceSmokeDetectors}
+          smokeDetectorSummary={smokeDetectorSummary}
           isFireResistantStructure={state.isFireResistantStructure ?? false}
           onFireResistantStructureChange={setIsFireResistantStructure}
           onAutoPlaceSprinklers={autoPlaceSprinklers}
@@ -224,6 +233,8 @@ export default function Home() {
             selectedHeatDetectorId={state.selectedHeatDetectorId}
             exitLights={currentFloor.exitLights}
             selectedExitLightId={state.selectedExitLightId}
+            smokeDetectors={currentFloor.smokeDetectors}
+            selectedSmokeDetectorId={state.selectedSmokeDetectorId}
             sprinklerHeads={currentFloor.sprinklerHeads}
             selectedSprinklerHeadId={state.selectedSprinklerHeadId}
             hydrantPlacements={currentFloor.hydrantPlacements}
@@ -233,6 +244,7 @@ export default function Home() {
             onResizePartition={resizePartition}
             onSelectHeatDetector={selectHeatDetector}
             onSelectExitLight={selectExitLight}
+            onSelectSmokeDetector={selectSmokeDetector}
             onSelectSprinklerHead={selectSprinklerHead}
             onSelectHydrant={selectHydrant}
             onChange={updateStructure}
