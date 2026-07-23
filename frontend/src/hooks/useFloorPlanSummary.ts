@@ -33,6 +33,12 @@ export type FloorPlanSummary = {
   isFireResistantStructure: boolean;
   floorCount: number;
   totalAreaSqm: number;
+  /** Building-scale inputs for the equipment-count predictor; see FloorPlanState. */
+  buildingGroundFloorCount?: number;
+  buildingBasementFloorCount?: number;
+  buildingAreaSqm?: number;
+  buildingTotalFloorAreaSqm?: number;
+  buildingSiteAreaSqm?: number;
   totalExtinguisherCount: number;
   totalHeatDetectorCount: number;
   totalHeatDetectorCountsByType: HeatDetectorTypeCounts;
@@ -124,6 +130,11 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     isFireResistantStructure: floorPlan.isFireResistantStructure ?? false,
     floorCount: floorPlan.floors.length,
     totalAreaSqm,
+    buildingGroundFloorCount: floorPlan.buildingGroundFloorCount,
+    buildingBasementFloorCount: floorPlan.buildingBasementFloorCount,
+    buildingAreaSqm: floorPlan.buildingAreaSqm,
+    buildingTotalFloorAreaSqm: floorPlan.buildingTotalFloorAreaSqm,
+    buildingSiteAreaSqm: floorPlan.buildingSiteAreaSqm,
     totalExtinguisherCount: byFloor.reduce((sum, f) => sum + f.extinguisherCount, 0),
     totalHeatDetectorCount: byFloor.reduce((sum, f) => sum + f.heatDetectorCount, 0),
     totalHeatDetectorCountsByType,

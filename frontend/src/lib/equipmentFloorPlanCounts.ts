@@ -6,17 +6,40 @@ import type { EquipmentName } from "@/types/equipmentSelection";
 const DEFAULT_QUANTITY = 0;
 
 /**
+ * Equipment with no drawing-based placement logic at all, whose default
+ * quantity instead comes from the reference-only ML estimate (see
+ * hooks/useEquipmentCountPrediction.ts) when building-scale info has been
+ * entered. Never claimed as authoritative — the caller must show it's an
+ * estimate the user should review.
+ */
+export const ML_ESTIMATED_EQUIPMENT_NAMES: ReadonlySet<EquipmentName> = new Set([
+  "예비펌프",
+  "주펌프",
+  "충압펌프",
+  "급기팬",
+  "배기팬",
+  "자동폐쇄장치",
+  "발신기",
+]);
+
+/**
  * Total installed count for `name` from the floor plan drawing page, used as
  * the equipment-selection page's default product quantity. Only equipment
  * types that are actually placed on the drawing (extinguishers, heat
- * detectors, exit lights, sprinkler heads, indoor hydrants) have real counts;
- * everything else falls back to DEFAULT_QUANTITY since the drawing page has
- * no placement data for it yet.
+ * detectors, exit lights, sprinkler heads, indoor hydrants) have real counts.
+ * ML_ESTIMATED_EQUIPMENT_NAMES falls back to `mlPrediction` (a reference-only
+ * estimate) when available; everything else falls back to DEFAULT_QUANTITY.
  */
 export function getFloorPlanInstalledCount(
   name: EquipmentName,
-  summary: FloorPlanSummary | null
+  summary: FloorPlanSummary | null,
+  mlPrediction?: Record<string, number> | null
 ): number {
+  if (ML_ESTIMATED_EQUIPMENT_NAMES.has(name)) {
+    const estimate = mlPrediction?.[name];
+    return estimate != null ? Math.round(estimate) : DEFAULT_QUANTITY;
+  }
+
   if (!summary) return DEFAULT_QUANTITY;
 
   switch (name) {

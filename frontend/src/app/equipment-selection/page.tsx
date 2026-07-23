@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { EQUIPMENT_LIST, EQUIPMENT_PRODUCTS } from "@/constants/equipmentProducts";
+import { ML_ESTIMATED_EQUIPMENT_NAMES } from "@/lib/equipmentFloorPlanCounts";
 import { FACILITY_TYPE_LABELS } from "@/constants/structureDefaults";
 import { useEquipmentSelection } from "@/hooks/useEquipmentSelection";
 import { useFloorPlanSummary } from "@/hooks/useFloorPlanSummary";
+import { useEquipmentCountPrediction } from "@/hooks/useEquipmentCountPrediction";
 import { getFireResistantConstructionCostPerM2 } from "@/lib/facilityRules";
 import { saveEquipmentSelectionToStorage } from "@/lib/equipmentSelectionStorage";
 import EquipmentListPanel from "@/components/equipment/EquipmentListPanel";
@@ -15,6 +17,7 @@ import CostSummaryPanel from "@/components/equipment/CostSummaryPanel";
 
 export default function EquipmentSelectionPage() {
   const floorPlanSummary = useFloorPlanSummary();
+  const equipmentCountPrediction = useEquipmentCountPrediction(floorPlanSummary);
   const {
     selection,
     quantities,
@@ -23,7 +26,7 @@ export default function EquipmentSelectionPage() {
     summary,
     fireResistantConstructionCost,
     totalCost,
-  } = useEquipmentSelection(floorPlanSummary);
+  } = useEquipmentSelection(floorPlanSummary, equipmentCountPrediction.data);
 
   const fireResistantConstructionCostInfo =
     floorPlanSummary?.isFireResistantStructure
@@ -47,6 +50,12 @@ export default function EquipmentSelectionPage() {
   const completedCount = EQUIPMENT_LIST.filter(
     (name) => selection[name] !== null
   ).length;
+
+  const mlEstimateNote =
+    ML_ESTIMATED_EQUIPMENT_NAMES.has(activeEquipment) &&
+    equipmentCountPrediction.data?.[activeEquipment] != null
+      ? "AI 추정치가 기본값으로 채워졌습니다 (참고용 — 학습 데이터가 적어 정확도가 낮으니 반드시 직접 확인 후 수정하세요)."
+      : undefined;
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
@@ -95,6 +104,7 @@ export default function EquipmentSelectionPage() {
               onQuantityChange={(quantity) =>
                 setQuantity(activeEquipment, quantity)
               }
+              mlEstimateNote={mlEstimateNote}
             />
           </div>
         </div>

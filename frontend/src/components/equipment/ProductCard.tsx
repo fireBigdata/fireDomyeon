@@ -12,6 +12,9 @@ type ProductCardProps = {
   onClick: () => void;
   quantity?: number;
   onQuantityChange?: (quantity: number) => void;
+  /** Shown under the quantity input when this quantity was pre-filled from
+   * the reference-only ML estimate (see hooks/useEquipmentCountPrediction). */
+  mlEstimateNote?: string;
 };
 
 export default function ProductCard({
@@ -24,6 +27,7 @@ export default function ProductCard({
   onClick,
   quantity,
   onQuantityChange,
+  mlEstimateNote,
 }: ProductCardProps) {
   return (
     <div className="flex w-44 flex-shrink-0 flex-col gap-2">
@@ -56,19 +60,24 @@ export default function ProductCard({
       </button>
 
       {selected && onQuantityChange && (
-        <label className="flex items-center justify-between gap-2 text-sm text-gray-600">
-          설치 개수
-          <input
-            type="number"
-            min={0}
-            value={quantity ?? 0}
-            onChange={(e) => {
-              const next = Number(e.target.value);
-              onQuantityChange(Number.isNaN(next) ? 0 : Math.max(0, next));
-            }}
-            className="w-16 rounded-md border border-gray-300 px-2 py-1 text-sm"
-          />
-        </label>
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center justify-between gap-2 text-sm text-gray-600">
+            설치 개수
+            <input
+              type="number"
+              min={0}
+              value={quantity ?? 0}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                onQuantityChange(Number.isNaN(next) ? 0 : Math.max(0, next));
+              }}
+              className="w-16 rounded-md border border-gray-300 px-2 py-1 text-sm"
+            />
+          </label>
+          {mlEstimateNote && (
+            <p className="text-xs text-amber-600">{mlEstimateNote}</p>
+          )}
+        </div>
       )}
     </div>
   );

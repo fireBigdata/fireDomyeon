@@ -168,6 +168,22 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setState((prev) => ({ ...prev, isFireResistantStructure }));
   }, []);
 
+  const setBuildingScale = useCallback(
+    (patch: Partial<
+      Pick<
+        FloorPlanState,
+        | "buildingGroundFloorCount"
+        | "buildingBasementFloorCount"
+        | "buildingAreaSqm"
+        | "buildingTotalFloorAreaSqm"
+        | "buildingSiteAreaSqm"
+      >
+    >) => {
+      setState((prev) => ({ ...prev, ...patch }));
+    },
+    []
+  );
+
   const addStructure = useCallback(
     (
       type: StructureType,
@@ -707,6 +723,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setName,
     setFacilityType,
     setIsFireResistantStructure,
+    setBuildingScale,
     addStructure,
     updateStructure,
     removeStructure,

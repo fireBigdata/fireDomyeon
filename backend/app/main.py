@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import floorplans
+from app.routers import floorplans, predictions
 
 app = FastAPI(title="Floor Plan API")
 
@@ -21,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(floorplans.router)
+app.include_router(predictions.router)
 
 
 @app.get("/health")

@@ -31,22 +31,26 @@ function createInitialSelectionState(): EquipmentSelectionState {
 
 function createInitialQuantityState(
   selection: EquipmentSelectionState,
-  floorPlanSummary: FloorPlanSummary | null
+  floorPlanSummary: FloorPlanSummary | null,
+  mlPrediction?: Record<string, number> | null
 ): EquipmentQuantityState {
   return EQUIPMENT_LIST.reduce((state, name) => {
-    state[name] = selection[name] ? getFloorPlanInstalledCount(name, floorPlanSummary) : 0;
+    state[name] = selection[name]
+      ? getFloorPlanInstalledCount(name, floorPlanSummary, mlPrediction)
+      : 0;
     return state;
   }, {} as EquipmentQuantityState);
 }
 
 export function useEquipmentSelection(
-  floorPlanSummary: FloorPlanSummary | null = null
+  floorPlanSummary: FloorPlanSummary | null = null,
+  mlPrediction?: Record<string, number> | null
 ) {
   const [selection, setSelection] = useState<EquipmentSelectionState>(
     createInitialSelectionState
   );
   const [quantities, setQuantities] = useState<EquipmentQuantityState>(() =>
-    createInitialQuantityState(selection, floorPlanSummary)
+    createInitialQuantityState(selection, floorPlanSummary, mlPrediction)
   );
 
   const selectProduct = useCallback(
@@ -57,10 +61,10 @@ export function useEquipmentSelection(
         [equipment]:
           value === null || value === NONE_PRODUCT_ID
             ? 0
-            : getFloorPlanInstalledCount(equipment, floorPlanSummary),
+            : getFloorPlanInstalledCount(equipment, floorPlanSummary, mlPrediction),
       }));
     },
-    [floorPlanSummary]
+    [floorPlanSummary, mlPrediction]
   );
 
   const setQuantity = useCallback(

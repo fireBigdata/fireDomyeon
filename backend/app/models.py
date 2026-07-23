@@ -141,6 +141,19 @@ class Floor(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class EquipmentCountRequest(BaseModel):
+    # Building-scale inputs for the equipment-count predictor (see
+    # app/ml/predictor.py) — user-entered, independent of the floor plan's
+    # drawn structures/area.
+    ground_floor_count: float = Field(alias="groundFloorCount")
+    basement_floor_count: float = Field(alias="basementFloorCount")
+    building_area_sqm: float = Field(alias="buildingAreaSqm")
+    total_floor_area_sqm: float = Field(alias="totalFloorAreaSqm")
+    site_area_sqm: float = Field(alias="siteAreaSqm")
+
+    model_config = {"populate_by_name": True}
+
+
 class FloorPlanState(BaseModel):
     id: Optional[str] = None
     name: str

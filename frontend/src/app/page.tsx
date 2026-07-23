@@ -29,6 +29,7 @@ export default function Home() {
     setName,
     setFacilityType,
     setIsFireResistantStructure,
+    setBuildingScale,
     addStructure,
     updateStructure,
     removeStructure,
@@ -199,6 +200,14 @@ export default function Home() {
           exitLightSummary={exitLightSummary}
           isFireResistantStructure={state.isFireResistantStructure ?? false}
           onFireResistantStructureChange={setIsFireResistantStructure}
+          buildingScale={{
+            buildingGroundFloorCount: state.buildingGroundFloorCount,
+            buildingBasementFloorCount: state.buildingBasementFloorCount,
+            buildingAreaSqm: state.buildingAreaSqm,
+            buildingTotalFloorAreaSqm: state.buildingTotalFloorAreaSqm,
+            buildingSiteAreaSqm: state.buildingSiteAreaSqm,
+          }}
+          onBuildingScaleChange={setBuildingScale}
           onAutoPlaceSprinklers={autoPlaceSprinklers}
           sprinklerSummary={sprinklerSummary}
           selectedHydrantProduct={selectedHydrantProduct}

@@ -10,6 +10,9 @@ import type { HydrantSummary } from "@/hooks/useHydrantPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
 import FireResistanceToggle from "@/components/panels/FireResistanceToggle";
+import BuildingScaleInput, {
+  type BuildingScaleFields,
+} from "@/components/panels/BuildingScaleInput";
 import AutoPlaceAllButton from "@/components/panels/AutoPlaceAllButton";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
@@ -35,6 +38,8 @@ type LeftPanelProps = {
   exitLightSummary: ExitLightSummary | null;
   isFireResistantStructure: boolean;
   onFireResistantStructureChange: (value: boolean) => void;
+  buildingScale: BuildingScaleFields;
+  onBuildingScaleChange: (patch: Partial<BuildingScaleFields>) => void;
   onAutoPlaceSprinklers: () => void;
   sprinklerSummary: SprinklerSummary | null;
   selectedHydrantProduct: EquipmentProduct | null;
@@ -62,6 +67,8 @@ export default function LeftPanel({
   exitLightSummary,
   isFireResistantStructure,
   onFireResistantStructureChange,
+  buildingScale,
+  onBuildingScaleChange,
   onAutoPlaceSprinklers,
   sprinklerSummary,
   selectedHydrantProduct,
@@ -78,6 +85,7 @@ export default function LeftPanel({
         isFireResistantStructure={isFireResistantStructure}
         onChange={onFireResistantStructureChange}
       />
+      <BuildingScaleInput value={buildingScale} onChange={onBuildingScaleChange} />
       <AutoPlaceAllButton onAutoPlaceAll={onAutoPlaceAll} />
       <ExtinguisherPanel
         facilityType={facilityType}

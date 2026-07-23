@@ -123,6 +123,20 @@ export type FloorPlanState = {
    * flags the result for review. See lib/sprinklerRules.ts.
    */
   isFireResistantStructure?: boolean;
+  /**
+   * Building-scale inputs used only to call the equipment-count predictor
+   * (see lib/api.ts predictEquipmentCounts) for 예비펌프/주펌프/충압펌프/
+   * 급기팬/배기팬/자동폐쇄장치/발신기 — equipment types this app has no
+   * drawing-based placement logic for. Independent of totalAreaSqm (which is
+   * measured from the drawn structures), since 건축면적/대지면적 can't be
+   * derived from the floor plan at all. Undefined = not entered yet, no
+   * prediction is requested.
+   */
+  buildingGroundFloorCount?: number;
+  buildingBasementFloorCount?: number;
+  buildingAreaSqm?: number;
+  buildingTotalFloorAreaSqm?: number;
+  buildingSiteAreaSqm?: number;
   floors: Floor[];
   currentFloorId: string;
   selectedStructureId: string | null;

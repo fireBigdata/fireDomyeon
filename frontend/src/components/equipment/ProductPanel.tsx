@@ -17,6 +17,9 @@ type ProductPanelProps = {
   quantity: number;
   onSelect: (value: EquipmentSelectionValue) => void;
   onQuantityChange: (quantity: number) => void;
+  /** Shown under the quantity input when this equipment's default quantity
+   * came from the reference-only ML estimate. */
+  mlEstimateNote?: string;
 };
 
 type SortOption = "recommended" | "price-asc" | "price-desc";
@@ -51,6 +54,7 @@ export default function ProductPanel({
   quantity,
   onSelect,
   onQuantityChange,
+  mlEstimateNote,
 }: ProductPanelProps) {
   const [sortOption, setSortOption] = useState<SortOption>("recommended");
   const sortedProducts = sortProducts(products, sortOption);
@@ -100,6 +104,9 @@ export default function ProductPanel({
             quantity={selectedValue === product.id ? quantity : undefined}
             onQuantityChange={
               selectedValue === product.id ? onQuantityChange : undefined
+            }
+            mlEstimateNote={
+              selectedValue === product.id ? mlEstimateNote : undefined
             }
           />
         ))}
