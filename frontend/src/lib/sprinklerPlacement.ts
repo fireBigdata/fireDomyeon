@@ -114,7 +114,7 @@ export function planStructureSprinklerPlacement(
         ruleId: null,
         horizontalDistanceM: null,
         headType: null,
-        classificationReason: classification.notApplicableReason ?? "",
+        classificationReason: "",
         warnings: [],
         headCount: 0,
       },
