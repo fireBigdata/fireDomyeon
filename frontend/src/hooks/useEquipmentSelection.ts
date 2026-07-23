@@ -2,9 +2,10 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
-  DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT,
+  DEFAULT_TO_CHEAPEST_PRODUCT_EQUIPMENT,
   EQUIPMENT_LIST,
   EQUIPMENT_PRODUCTS,
+  getCheapestProduct,
 } from "@/constants/equipmentProducts";
 import type {
   EquipmentName,
@@ -20,10 +21,10 @@ import { getFireResistantConstructionCostPerM2 } from "@/lib/facilityRules";
 
 function createInitialSelectionState(): EquipmentSelectionState {
   return EQUIPMENT_LIST.reduce((state, name) => {
-    const firstProduct = EQUIPMENT_PRODUCTS[name][0];
+    const cheapestProduct = getCheapestProduct(name);
     state[name] =
-      DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT.includes(name) && firstProduct
-        ? firstProduct.id
+      DEFAULT_TO_CHEAPEST_PRODUCT_EQUIPMENT.includes(name) && cheapestProduct
+        ? cheapestProduct.id
         : null;
     return state;
   }, {} as EquipmentSelectionState);

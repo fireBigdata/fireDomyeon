@@ -66,8 +66,8 @@ export const EQUIPMENT_LIST: EquipmentName[] = [
   "자동폐쇄장치",
 ];
 
-/** 설비 선택 페이지에서 사용자가 고르기 전부터 카탈로그의 첫 제품을 기본 선택해두는 설비 (소화기/감지기류/유도등류/스프링클러/옥내소화전). 나머지는 미선택("선택 필요") 상태로 시작. */
-export const DEFAULT_TO_FIRST_PRODUCT_EQUIPMENT: EquipmentName[] = [
+/** 설비 선택 페이지에서 사용자가 고르기 전부터 최저가 제품을 기본 선택해두는 설비 (소화기/감지기류/유도등류/스프링클러/옥내소화전). 나머지는 미선택("선택 필요") 상태로 시작. */
+export const DEFAULT_TO_CHEAPEST_PRODUCT_EQUIPMENT: EquipmentName[] = [
   "소화기",
   "스프링클러",
   "차동식열감지기",
@@ -1813,3 +1813,14 @@ export const EQUIPMENT_PRODUCTS: Record<EquipmentName, EquipmentProduct[]> = {
     },
   ],
 };
+
+/** Lowest-priced product in this equipment's catalog (falls back to the first entry if every price is null). */
+export function getCheapestProduct(name: EquipmentName): EquipmentProduct | undefined {
+  const products = EQUIPMENT_PRODUCTS[name];
+  if (products.length === 0) return undefined;
+  return products.reduce((cheapest, product) => {
+    if (product.price == null) return cheapest;
+    if (cheapest.price == null || product.price < cheapest.price) return product;
+    return cheapest;
+  }, products[0]);
+}
