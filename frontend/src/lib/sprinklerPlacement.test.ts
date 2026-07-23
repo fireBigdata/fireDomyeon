@@ -43,6 +43,7 @@ function makeFloor(structures: Structure[]): Floor {
     heatDetectors: [],
     exitLights: [],
     sprinklerHeads: [],
+    hydrantPlacements: [],
   };
 }
 
@@ -363,5 +364,79 @@ describe("autoPlaceSprinklers — floor orchestration", () => {
     const result = autoPlaceSprinklers(floor, APARTMENT, 1);
     expect(result.heads.every((h) => h.roomId === "room-a")).toBe(true);
     expect(result.results.map((r) => r.structureId)).toEqual(["room-a"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// New facility types (villa/commercial/hospital/school/subway/factory/warehouse)
+// ---------------------------------------------------------------------------
+
+describe("planStructureSprinklerPlacement — new facility types", () => {
+  const floor = makeFloor([]);
+  const VILLA: SprinklerClassificationContext = { facilityType: "villa" };
+  const COMMERCIAL: SprinklerClassificationContext = { facilityType: "commercial" };
+  const COMMERCIAL_FIRE_RESISTANT: SprinklerClassificationContext = {
+    facilityType: "commercial",
+    isFireResistantStructure: true,
+  };
+
+  it("villa rooms are classified exactly like apartment rooms (residential unit head)", () => {
+    const room = makeRoom({ roomType: RoomType.LIVING });
+    const { result } = planStructureSprinklerPlacement(floor, room, VILLA, 1);
+    expect(result.ruleId).toBe("NFTC103-2.2.1-RESIDENTIAL-APARTMENT");
+  });
+
+  it("every non-residential facility type is applicable (only house is not)", () => {
+    for (const facilityType of [
+      "villa",
+      "commercial",
+      "hospital",
+      "school",
+      "subway",
+      "factory",
+      "warehouse",
+    ] as const) {
+      const room = makeRoom();
+      const { result } = planStructureSprinklerPlacement(floor, room, { facilityType }, 1);
+      expect(result.status).not.toBe(SprinklerComplianceStatus.NOT_APPLICABLE);
+    }
+  });
+
+  it("a non-residential facility room gets the general rule, not the residential-apartment rule", () => {
+    const room = makeRoom({ roomType: RoomType.LIVING });
+    const { result } = planStructureSprinklerPlacement(floor, room, COMMERCIAL, 1);
+    expect(result.ruleId).not.toBe("NFTC103-2.2.1-RESIDENTIAL-APARTMENT");
+    expect(["NFTC103-2.2.1-GENERAL-NONFIRERESISTANT", "NFTC103-2.2.1-GENERAL-FIRERESISTANT"]).toContain(
+      result.ruleId
+    );
+  });
+
+  it("a non-residential facility room respects fire-resistance the same way a corridor does", () => {
+    const room = makeRoom();
+    const resistant = planStructureSprinklerPlacement(floor, room, COMMERCIAL_FIRE_RESISTANT, 1);
+    expect(resistant.result.ruleId).toBe("NFTC103-2.2.1-GENERAL-FIRERESISTANT");
+    expect(resistant.result.horizontalDistanceM).toBe(2.3);
+
+    const unresolved = planStructureSprinklerPlacement(floor, room, COMMERCIAL, 1);
+    expect(unresolved.result.ruleId).toBe("NFTC103-2.2.1-GENERAL-NONFIRERESISTANT");
+  });
+
+  it("a non-residential facility room or corridor is always flagged for review and never silently claimed compliant", () => {
+    const room = makeRoom();
+    const corridor: Structure = { id: "corr-1", type: "corridor", x: 0, y: 0, width: 200, height: 50 };
+
+    const roomResult = planStructureSprinklerPlacement(floor, room, COMMERCIAL_FIRE_RESISTANT, 1).result;
+    const corridorResult = planStructureSprinklerPlacement(floor, corridor, COMMERCIAL_FIRE_RESISTANT, 1).result;
+
+    expect(roomResult.status).toBe(SprinklerComplianceStatus.REVIEW_REQUIRED);
+    expect(corridorResult.status).toBe(SprinklerComplianceStatus.REVIEW_REQUIRED);
+    expect(roomResult.warnings.some((w) => w.includes("규모"))).toBe(true);
+    expect(corridorResult.warnings.some((w) => w.includes("규모"))).toBe(true);
+  });
+
+  it("special-combustible/stage hazard flags still take priority over the general non-residential rule", () => {
+    const room = makeRoom({ sprinklerHazard: SprinklerHazardClass.SPECIAL_COMBUSTIBLE });
+    const { result } = planStructureSprinklerPlacement(floor, room, { facilityType: "factory" }, 1);
+    expect(result.ruleId).toBe("NFTC103-2.2.1-SPECIAL-COMBUSTIBLE");
   });
 });

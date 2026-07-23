@@ -1,26 +1,20 @@
 import { RoomType } from "@/types/floorplan";
-import type { Floor, Structure } from "@/types/floorplan";
+import type { FacilityType, Floor, Structure } from "@/types/floorplan";
 import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { Point } from "@/lib/heatDetectorPlacement";
 import { createId } from "@/lib/id";
 import { metersToPixelLength, pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
 import { computeLeafBoxes, type Box } from "@/lib/partitionTree";
 import { computeTotalStructurePixelArea } from "@/lib/structureArea";
-import { getObstaclesNear, moveOffObstacles } from "@/lib/obstacleAvoidance";
+import { getObstaclesNear } from "@/lib/obstacleAvoidance";
+import { distance, placePointsInStructure, resolveOverlaps } from "@/lib/wallHuggingPlacement";
+import { getExtinguisherAreaPerUnit, type ExtinguisherAreaPerUnit } from "@/lib/facilityRules";
 import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 
-const FLOOR_AREA_PER_ABILITY_UNIT = 100; // ㎡ per required ability unit
+const DEFAULT_AREA_PER_UNIT: ExtinguisherAreaPerUnit = { normal: 100, fireResistant: 200 };
 const CORRIDOR_LENGTH_PER_EXTINGUISHER_METERS = 20;
 export const DEFAULT_MAX_TRAVEL_DISTANCE_METERS = 20;
-
-const WALL_MARGIN_RATIO = 0.12;
-const MIN_WALL_MARGIN_PX = 8;
-const MAX_WALL_MARGIN_PX = 24;
-
-// Two auto-placed extinguishers closer than this (in pixels) are treated as
-// overlapping icons and nudged apart.
-const MIN_SEPARATION_PX = 14;
 
 // Grid resolution used when sampling the floor plan for 20m coverage gaps.
 const SAMPLE_INTERVAL_METERS = 2;
@@ -45,18 +39,18 @@ export function calculateTotalFloorArea(structures: Structure[], scale: number):
 }
 
 /**
- * NFTC 101 별표1: 1 능력단위당 기준면적 100㎡ (기타구조). 내화구조이고 벽/반자가
- * 불연재료·준불연재료·난연재료인 경우 기준면적을 2배로 적용한다(=200㎡당 1단위),
- * 감지기 1개당 담당 면적이 넓어지는 것과 같은 이유.
+ * NFTC 101 별표2: 용도별 능력단위 기준면적(기본값은 근린생활시설 등 100㎡ 그룹).
+ * 내화구조이고 벽/반자가 불연재료·준불연재료·난연재료인 경우 기준면적을 2배로
+ * 적용한다, 감지기 1개당 담당 면적이 넓어지는 것과 같은 이유. 용도별 실제 값은
+ * lib/facilityRules.ts의 EXTINGUISHER_AREA_PER_UNIT_M2 참고.
  */
 export function calculateRequiredAbilityUnits(
   totalFloorArea: number,
-  isFireResistantStructure?: boolean
+  isFireResistantStructure?: boolean,
+  areaPerUnitM2: ExtinguisherAreaPerUnit = DEFAULT_AREA_PER_UNIT
 ): number {
   if (totalFloorArea <= 0) return 0;
-  const areaPerUnit = isFireResistantStructure
-    ? FLOOR_AREA_PER_ABILITY_UNIT * 2
-    : FLOOR_AREA_PER_ABILITY_UNIT;
+  const areaPerUnit = isFireResistantStructure ? areaPerUnitM2.fireResistant : areaPerUnitM2.normal;
   return Math.ceil(totalFloorArea / areaPerUnit);
 }
 
@@ -155,135 +149,6 @@ export function calculateApartmentExtinguisherCount(
 
 function getPlaceableStructures(structures: Structure[]): Structure[] {
   return structures.filter((structure) => PLACEABLE_STRUCTURE_TYPES.has(structure.type));
-}
-
-function distance(a: Point, b: Point): number {
-  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-}
-
-/** A small inset from the structure's own walls, clamped so it never turns the box inside-out. */
-function computeWallMargin(size: number): number {
-  const margin = Math.min(Math.max(size * WALL_MARGIN_RATIO, MIN_WALL_MARGIN_PX), MAX_WALL_MARGIN_PX);
-  return Math.min(margin, Math.max(size / 2 - 1, 0));
-}
-
-/** Perimeter-parameter (arc length from the box's top-left corner) of the point on `box`'s boundary closest to `point`. */
-function closestBoundaryParam(box: Box, point: Point): number {
-  const { x, y, width: w, height: h } = box;
-  const cx = Math.min(Math.max(point.x, x), x + w);
-  const cy = Math.min(Math.max(point.y, y), y + h);
-  const dTop = cy - y;
-  const dBottom = y + h - cy;
-  const dLeft = cx - x;
-  const dRight = x + w - cx;
-  const minD = Math.min(dTop, dBottom, dLeft, dRight);
-  if (minD === dTop) return cx - x;
-  if (minD === dRight) return w + (cy - y);
-  if (minD === dBottom) return w + h + (x + w - cx);
-  return w + h + w + (y + h - cy);
-}
-
-function pointAtPerimeterParam(box: Box, t: number): Point {
-  const { x, y, width: w, height: h } = box;
-  const perimeter = 2 * (w + h);
-  if (perimeter <= 0) return { x, y };
-  let tt = ((t % perimeter) + perimeter) % perimeter;
-  if (tt <= w) return { x: x + tt, y };
-  tt -= w;
-  if (tt <= h) return { x: x + w, y: y + tt };
-  tt -= h;
-  if (tt <= w) return { x: x + w - tt, y: y + h };
-  tt -= w;
-  return { x, y: y + h - tt };
-}
-
-/** Evenly spaces `count` points around `box`'s perimeter, starting at `startParam`. */
-function placePointsOnPerimeter(box: Box, count: number, startParam: number): Point[] {
-  if (count <= 0) return [];
-  if (count === 1) return [pointAtPerimeterParam(box, startParam)];
-  const perimeter = 2 * (box.width + box.height);
-  const step = perimeter / count;
-  return Array.from({ length: count }, (_, i) => pointAtPerimeterParam(box, startParam + i * step));
-}
-
-/** The nearest entrance structure to `structure`, but only if it's plausibly this structure's own entrance. */
-function findNearestEntrance(structure: Structure, entrances: Structure[]): Structure | null {
-  if (entrances.length === 0) return null;
-  const center = { x: structure.x + structure.width / 2, y: structure.y + structure.height / 2 };
-  let nearest: Structure | null = null;
-  let nearestDist = Infinity;
-  for (const entrance of entrances) {
-    const d = distance(center, {
-      x: entrance.x + entrance.width / 2,
-      y: entrance.y + entrance.height / 2,
-    });
-    if (d < nearestDist) {
-      nearestDist = d;
-      nearest = entrance;
-    }
-  }
-  const proximityThreshold = Math.hypot(structure.width, structure.height) * 1.5;
-  return nearest && nearestDist <= proximityThreshold ? nearest : null;
-}
-
-/**
- * Places `count` points near the walls of a single structure (absolute canvas
- * coordinates). If `biasPointAbsolute` is given, placement starts from the
- * wall closest to it; otherwise it starts near the structure's own entrance,
- * if one is close enough to plausibly belong to it.
- */
-function placePointsInStructure(
-  structure: Structure,
-  count: number,
-  entrances: Structure[],
-  biasPointAbsolute?: Point,
-  obstacles: Box[] = []
-): Point[] {
-  if (count <= 0) return [];
-
-  const marginX = computeWallMargin(structure.width);
-  const marginY = computeWallMargin(structure.height);
-  const box: Box = {
-    x: marginX,
-    y: marginY,
-    width: Math.max(structure.width - marginX * 2, 0),
-    height: Math.max(structure.height - marginY * 2, 0),
-  };
-
-  let startParam = 0;
-  if (biasPointAbsolute) {
-    startParam = closestBoundaryParam(box, {
-      x: biasPointAbsolute.x - structure.x,
-      y: biasPointAbsolute.y - structure.y,
-    });
-  } else {
-    const nearestEntrance = findNearestEntrance(structure, entrances);
-    if (nearestEntrance) {
-      startParam = closestBoundaryParam(box, {
-        x: nearestEntrance.x + nearestEntrance.width / 2 - structure.x,
-        y: nearestEntrance.y + nearestEntrance.height / 2 - structure.y,
-      });
-    }
-  }
-
-  return placePointsOnPerimeter(box, count, startParam).map((p) =>
-    moveOffObstacles({ x: structure.x + p.x, y: structure.y + p.y }, obstacles, structure)
-  );
-}
-
-/** Nudges any point that lands within MIN_SEPARATION_PX of an earlier one, so icons never overlap. */
-function resolveOverlaps<T extends { point: Point }>(items: T[]): T[] {
-  const placed: Point[] = [];
-  return items.map((item) => {
-    let candidate = { ...item.point };
-    let guard = 0;
-    while (placed.some((p) => distance(p, candidate) < MIN_SEPARATION_PX) && guard < 8) {
-      candidate = { x: candidate.x + MIN_SEPARATION_PX, y: candidate.y + MIN_SEPARATION_PX };
-      guard += 1;
-    }
-    placed.push(candidate);
-    return { ...item, point: candidate };
-  });
 }
 
 function toPlacements(
@@ -522,6 +387,11 @@ export type NonApartmentPlacementResult = {
  * 1) 면적/능력단위 기준 최소 개수 계산 → 2) 벽 쪽에 균등 배치 →
  * 3) 도면을 일정 간격으로 샘플링 → 4) 20m 초과 지점 확인 →
  * 5) 초과 지점 인근 벽에 소화기 추가 → 6) 모두 만족할 때까지 반복.
+ *
+ * `facilityType`은 apartment/villa를 제외한 용도(단독주택/상가/병원/학교/
+ * 지하철역/공장/창고)만 받는다 — 공동주택은 planApartmentExtinguisherPlacement
+ * (세대별 거실/복도 개수 기준)를 대신 쓴다. 기본값 "house"는 기존 호출부와의
+ * 하위 호환을 위한 것으로, 100㎡(내화 200㎡) 기준과 동일하다.
  */
 export function planNonApartmentExtinguisherPlacement(
   floor: Floor,
@@ -529,12 +399,17 @@ export function planNonApartmentExtinguisherPlacement(
   abilityUnitsPerExtinguisher: number,
   extinguisherTypeId: string,
   isFireResistantStructure?: boolean,
+  facilityType: Exclude<FacilityType, "apartment" | "villa"> = "house",
   maximumDistanceMeters: number = DEFAULT_MAX_TRAVEL_DISTANCE_METERS
 ): NonApartmentPlacementResult {
   validateAbilityUnitsPerExtinguisher(abilityUnitsPerExtinguisher);
 
   const totalFloorArea = calculateTotalFloorArea(floor.structures, scale);
-  const requiredAbilityUnits = calculateRequiredAbilityUnits(totalFloorArea, isFireResistantStructure);
+  const requiredAbilityUnits = calculateRequiredAbilityUnits(
+    totalFloorArea,
+    isFireResistantStructure,
+    getExtinguisherAreaPerUnit(facilityType)
+  );
   const minimumCountByArea = calculateExtinguisherCountByAbility(
     requiredAbilityUnits,
     abilityUnitsPerExtinguisher

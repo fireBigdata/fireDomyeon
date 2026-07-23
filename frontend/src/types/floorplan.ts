@@ -3,6 +3,7 @@ import type { HeatDetector } from "@/types/heatDetector";
 import type { ExitLight } from "@/types/exitLight";
 import { SprinklerHazardClass } from "@/types/sprinkler";
 import type { SprinklerHead } from "@/types/sprinkler";
+import type { HydrantPlacement } from "@/types/hydrant";
 
 export type StructureType =
   | "room"
@@ -12,7 +13,23 @@ export type StructureType =
   | "stairs"
   | "obstacle";
 
-export type FacilityType = "apartment" | "house";
+// apartment/villa: 공동주택(아파트/연립·다세대주택) — 세대별 room/corridor 개수
+// 기준 소화기 배치, 주거용 스프링클러헤드 적용.
+// house: 단독주택 — 스프링클러 설치대상 아님(lib/sprinklerRules.ts).
+// commercial/hospital/school/subway/factory/warehouse: 비주거 특정소방대상물 —
+// 면적/능력단위 기준 소화기 배치, 일반기준(2.1/2.3m) 스프링클러 적용. 이 앱은
+// 연면적·층수 등 건물 전체 규모 데이터가 없어 스프링클러 설치대상 여부는 항상
+// 검토 필요로 표시된다. See lib/facilityRules.ts.
+export type FacilityType =
+  | "apartment"
+  | "villa"
+  | "house"
+  | "commercial"
+  | "hospital"
+  | "school"
+  | "subway"
+  | "factory"
+  | "warehouse";
 
 // Room usage type. To add a new usage: extend this enum and add a matching
 // entry in ROOM_TYPE_DEFAULTS / ROOM_TYPE_ORDER (constants/roomTypes.ts).
@@ -21,6 +38,9 @@ export enum RoomType {
   LIVING = "LIVING",
   KITCHEN = "KITCHEN",
   BOILER = "BOILER",
+  // 상가/병원/학교/지하철역/공장/창고 등 비주거 시설의 방(실) — 세부 용도(병실,
+  // 교실, 사무실 등)를 구분하지 않는 범용 실. See lib/facilityRules.ts.
+  GENERIC = "GENERIC",
 }
 
 // Entrance usage type. To add a new kind: extend this enum and add a
@@ -88,6 +108,7 @@ export type Floor = {
   heatDetectors: HeatDetector[];
   exitLights: ExitLight[];
   sprinklerHeads: SprinklerHead[];
+  hydrantPlacements: HydrantPlacement[];
 };
 
 export type FloorPlanState = {
@@ -111,9 +132,10 @@ export type FloorPlanState = {
   selectedHeatDetectorId: string | null;
   selectedExitLightId: string | null;
   selectedSprinklerHeadId: string | null;
+  selectedHydrantId: string | null;
   scale: number;
 };
 
-export type { ExtinguisherPlacement, HeatDetector, ExitLight, SprinklerHead };
+export type { ExtinguisherPlacement, HeatDetector, ExitLight, SprinklerHead, HydrantPlacement };
 export { HeatDetectorType } from "@/types/heatDetector";
 export { SprinklerHazardClass, SprinklerHeadType, SprinklerComplianceStatus } from "@/types/sprinkler";

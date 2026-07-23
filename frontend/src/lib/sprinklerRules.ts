@@ -1,6 +1,7 @@
 import { RoomType, SprinklerHazardClass } from "@/types/floorplan";
 import type { FacilityType, Structure, StructureType } from "@/types/floorplan";
 import { SprinklerHeadType } from "@/types/sprinkler";
+import { isResidentialUnitFacility } from "@/lib/facilityRules";
 
 // ---------------------------------------------------------------------------
 // NFPC 103 / NFTC 103 (스프링클러설비의 화재안전성능기준/화재안전기술기준) —
@@ -93,6 +94,14 @@ export interface SprinklerClassificationResult {
 const HOUSE_NOT_APPLICABLE_REASON =
   "단독/다가구주택 등(house)은 일반적으로 「소방시설 설치 및 관리에 관한 법률 시행령」상 스프링클러설비 설치대상이 아니며, 주택용 소방시설(소화기·단독경보형감지기) 기준이 적용됩니다. 실제 설치의무 대상 여부(규모·용도)는 별도로 확인하세요.";
 
+// 상가/병원/학교/지하철역/공장/창고 등은 실제로는 연면적·층수 등 규모 기준에
+// 따라 스프링클러 설치의무 대상 여부가 갈리며, 랙식창고(NFTC 609)·지하역사
+// 등 특수 조항이 적용되는 경우도 있다. 이 앱은 건물 전체 규모 데이터를 다루지
+// 않으므로 이런 시설은 항상 "적용 가능성 있음 + 검토 필요"로 처리한다 — 절대
+// 조용히 COMPLIANT로 단정하지 않는다.
+const NON_RESIDENTIAL_SCALE_REVIEW_WARNING =
+  "이 시설 유형은 연면적·층수 등 규모 기준에 따라 스프링클러 설치의무 대상 여부가 달라질 수 있고, 랙식창고·지하역사 등 특수 기준이 적용될 수도 있습니다. 이 앱은 건물 전체 규모 데이터를 다루지 않으므로 실제 설치의무 대상 여부와 특수 기준 적용 여부를 반드시 별도로 확인하세요.";
+
 /** Facility-level applicability check (STEP 2.1), independent of any single structure. */
 export function getFacilitySprinklerApplicability(facilityType: FacilityType): {
   applicable: boolean;
@@ -140,24 +149,29 @@ export function classifyStructureForSprinkler(
 
   const warnings: string[] = [];
 
+  const nonResidentialFacility = !isResidentialUnitFacility(context.facilityType);
+
   if (structure.type === "corridor") {
     const fireResistant = context.isFireResistantStructure;
     const ruleId: SprinklerRuleId =
       fireResistant === true
         ? "NFTC103-2.2.1-GENERAL-FIRERESISTANT"
         : "NFTC103-2.2.1-GENERAL-NONFIRERESISTANT";
-    const requiresReview = fireResistant === undefined;
-    if (requiresReview) {
+    const fireResistanceUnknown = fireResistant === undefined;
+    if (fireResistanceUnknown) {
       warnings.push(
         "건물 내화구조 여부가 확인되지 않아 안전측인 일반구조 기준(2.1m)으로 계산되었습니다. 내화구조 확인 후 재계산하세요."
       );
+    }
+    if (nonResidentialFacility) {
+      warnings.push(NON_RESIDENTIAL_SCALE_REVIEW_WARNING);
     }
     return {
       applicable: true,
       notApplicableReason: null,
       ruleId,
       classificationReason: `복도 - ${SPRINKLER_RULES[ruleId].label}`,
-      requiresReview,
+      requiresReview: fireResistanceUnknown || nonResidentialFacility,
       warnings,
     };
   }
@@ -189,22 +203,49 @@ export function classifyStructureForSprinkler(
     };
   }
 
-  // Default residential path: every room inside an apartment unit qualifies
-  // for the 주거용 스프링클러헤드 proviso (NFTC 103 2.2.1 단서).
-  let requiresReview = false;
-  if (structure.roomType === RoomType.BOILER) {
-    requiresReview = true;
+  if (isResidentialUnitFacility(context.facilityType)) {
+    // Residential path (apartment/villa): every room inside a 공동주택 세대
+    // qualifies for the 주거용 스프링클러헤드 proviso (NFTC 103 2.2.1 단서).
+    let requiresReview = false;
+    if (structure.roomType === RoomType.BOILER) {
+      requiresReview = true;
+      warnings.push(
+        "보일러실 등 화기·가스설비 취급 공간은 스프링클러 외 별도 소화설비(가스누설경보기, 자동확산소화기 등) 적용 대상 여부를 추가로 확인하세요."
+      );
+    }
+
+    return {
+      applicable: true,
+      notApplicableReason: null,
+      ruleId: "NFTC103-2.2.1-RESIDENTIAL-APARTMENT",
+      classificationReason: `공동주택 세대 내 실 - ${SPRINKLER_RULES["NFTC103-2.2.1-RESIDENTIAL-APARTMENT"].label}`,
+      requiresReview,
+      warnings,
+    };
+  }
+
+  // Non-residential facility types (상가/병원/학교/지하철역/공장/창고): this app
+  // doesn't sub-classify rooms by usage (no 병실/교실/사무실 taxonomy — see
+  // lib/facilityRules.ts), so every non-hazard room gets the same general
+  // horizontal-distance rule a corridor would, gated by fire-resistance.
+  const fireResistant = context.isFireResistantStructure;
+  const ruleId: SprinklerRuleId =
+    fireResistant === true
+      ? "NFTC103-2.2.1-GENERAL-FIRERESISTANT"
+      : "NFTC103-2.2.1-GENERAL-NONFIRERESISTANT";
+  if (fireResistant === undefined) {
     warnings.push(
-      "보일러실 등 화기·가스설비 취급 공간은 스프링클러 외 별도 소화설비(가스누설경보기, 자동확산소화기 등) 적용 대상 여부를 추가로 확인하세요."
+      "건물 내화구조 여부가 확인되지 않아 안전측인 일반구조 기준(2.1m)으로 계산되었습니다. 내화구조 확인 후 재계산하세요."
     );
   }
+  warnings.push(NON_RESIDENTIAL_SCALE_REVIEW_WARNING);
 
   return {
     applicable: true,
     notApplicableReason: null,
-    ruleId: "NFTC103-2.2.1-RESIDENTIAL-APARTMENT",
-    classificationReason: `공동주택 세대 내 실 - ${SPRINKLER_RULES["NFTC103-2.2.1-RESIDENTIAL-APARTMENT"].label}`,
-    requiresReview,
+    ruleId,
+    classificationReason: `일반 실 - ${SPRINKLER_RULES[ruleId].label}`,
+    requiresReview: true,
     warnings,
   };
 }

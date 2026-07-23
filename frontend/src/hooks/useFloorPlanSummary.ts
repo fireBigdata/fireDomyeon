@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import type { FloorPlanState } from "@/types/floorplan";
+import type { FacilityType, FloorPlanState } from "@/types/floorplan";
 import type { ExitLight, ExitLightCategory } from "@/types/exitLight";
 import type { HeatDetector } from "@/types/heatDetector";
 import { HeatDetectorType } from "@/types/heatDetector";
@@ -24,9 +24,13 @@ export type FloorEquipmentSummary = {
   heatDetectorCountsByType: HeatDetectorTypeCounts;
   exitLightCountsByCategory: ExitLightCategoryCounts;
   sprinklerHeadCount: number;
+  hydrantCount: number;
 };
 
 export type FloorPlanSummary = {
+  facilityType: FacilityType;
+  /** Whether the building is fire-resistant (내화구조) — see FloorPlanState.isFireResistantStructure. */
+  isFireResistantStructure: boolean;
   floorCount: number;
   totalAreaSqm: number;
   totalExtinguisherCount: number;
@@ -34,6 +38,7 @@ export type FloorPlanSummary = {
   totalHeatDetectorCountsByType: HeatDetectorTypeCounts;
   totalExitLightCountsByCategory: ExitLightCategoryCounts;
   totalSprinklerHeadCount: number;
+  totalHydrantCount: number;
   byFloor: FloorEquipmentSummary[];
 };
 
@@ -79,6 +84,7 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     heatDetectorCountsByType: countHeatDetectorsByType(floor.heatDetectors),
     exitLightCountsByCategory: countExitLightsByCategory(floor.exitLights),
     sprinklerHeadCount: floor.sprinklerHeads?.length ?? 0,
+    hydrantCount: floor.hydrantPlacements?.length ?? 0,
   }));
 
   const totalAreaSqm = floorPlan.floors.reduce(
@@ -114,6 +120,8 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
   } as HeatDetectorTypeCounts;
 
   return {
+    facilityType: floorPlan.facilityType,
+    isFireResistantStructure: floorPlan.isFireResistantStructure ?? false,
     floorCount: floorPlan.floors.length,
     totalAreaSqm,
     totalExtinguisherCount: byFloor.reduce((sum, f) => sum + f.extinguisherCount, 0),
@@ -121,6 +129,7 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     totalHeatDetectorCountsByType,
     totalExitLightCountsByCategory,
     totalSprinklerHeadCount: byFloor.reduce((sum, f) => sum + f.sprinklerHeadCount, 0),
+    totalHydrantCount: byFloor.reduce((sum, f) => sum + f.hydrantCount, 0),
     byFloor,
   };
 }

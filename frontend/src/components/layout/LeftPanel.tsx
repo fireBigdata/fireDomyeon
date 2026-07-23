@@ -6,13 +6,16 @@ import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
 import type { ExitLightSummary } from "@/lib/exitLightPlacement";
 import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
+import type { HydrantSummary } from "@/hooks/useHydrantPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
 import FireResistanceToggle from "@/components/panels/FireResistanceToggle";
+import AutoPlaceAllButton from "@/components/panels/AutoPlaceAllButton";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 import ExitLightPanel from "@/components/panels/ExitLightPanel";
 import SprinklerPanel from "@/components/panels/SprinklerPanel";
+import HydrantPanel from "@/components/panels/HydrantPanel";
 
 type LeftPanelProps = {
   facilityType: FacilityType;
@@ -34,6 +37,11 @@ type LeftPanelProps = {
   onFireResistantStructureChange: (value: boolean) => void;
   onAutoPlaceSprinklers: () => void;
   sprinklerSummary: SprinklerSummary | null;
+  selectedHydrantProduct: EquipmentProduct | null;
+  hydrantError: string | null;
+  onAutoPlaceHydrants: () => void;
+  hydrantSummary: HydrantSummary | null;
+  onAutoPlaceAll: () => void;
 };
 
 export default function LeftPanel({
@@ -56,6 +64,11 @@ export default function LeftPanel({
   onFireResistantStructureChange,
   onAutoPlaceSprinklers,
   sprinklerSummary,
+  selectedHydrantProduct,
+  hydrantError,
+  onAutoPlaceHydrants,
+  hydrantSummary,
+  onAutoPlaceAll,
 }: LeftPanelProps) {
   return (
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
@@ -65,6 +78,7 @@ export default function LeftPanel({
         isFireResistantStructure={isFireResistantStructure}
         onChange={onFireResistantStructureChange}
       />
+      <AutoPlaceAllButton onAutoPlaceAll={onAutoPlaceAll} />
       <ExtinguisherPanel
         facilityType={facilityType}
         selectedProduct={selectedExtinguisherProduct}
@@ -81,6 +95,12 @@ export default function LeftPanel({
       />
       <ExitLightPanel onAutoPlace={onAutoPlaceExitLights} summary={exitLightSummary} />
       <SprinklerPanel onAutoPlace={onAutoPlaceSprinklers} summary={sprinklerSummary} />
+      <HydrantPanel
+        selectedProduct={selectedHydrantProduct}
+        error={hydrantError}
+        onAutoPlace={onAutoPlaceHydrants}
+        summary={hydrantSummary}
+      />
     </aside>
   );
 }

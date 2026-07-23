@@ -11,6 +11,7 @@ export function createFloor(name: string): Floor {
     heatDetectors: [],
     exitLights: [],
     sprinklerHeads: [],
+    hydrantPlacements: [],
   };
 }
 
@@ -32,6 +33,7 @@ export function cloneFloor(floor: Floor, name: string): Floor {
     heatDetectors: [],
     exitLights: [],
     sprinklerHeads: [],
+    hydrantPlacements: [],
   };
 }
 

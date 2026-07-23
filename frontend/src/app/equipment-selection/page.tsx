@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { EQUIPMENT_LIST, EQUIPMENT_PRODUCTS } from "@/constants/equipmentProducts";
+import { FACILITY_TYPE_LABELS } from "@/constants/structureDefaults";
 import { useEquipmentSelection } from "@/hooks/useEquipmentSelection";
 import { useFloorPlanSummary } from "@/hooks/useFloorPlanSummary";
+import { getFireResistantConstructionCostPerM2 } from "@/lib/facilityRules";
 import { saveEquipmentSelectionToStorage } from "@/lib/equipmentSelectionStorage";
 import EquipmentListPanel from "@/components/equipment/EquipmentListPanel";
 import ProductPanel from "@/components/equipment/ProductPanel";
@@ -13,8 +15,25 @@ import CostSummaryPanel from "@/components/equipment/CostSummaryPanel";
 
 export default function EquipmentSelectionPage() {
   const floorPlanSummary = useFloorPlanSummary();
-  const { selection, quantities, selectProduct, setQuantity, summary, totalCost } =
-    useEquipmentSelection(floorPlanSummary);
+  const {
+    selection,
+    quantities,
+    selectProduct,
+    setQuantity,
+    summary,
+    fireResistantConstructionCost,
+    totalCost,
+  } = useEquipmentSelection(floorPlanSummary);
+
+  const fireResistantConstructionCostInfo =
+    floorPlanSummary?.isFireResistantStructure
+      ? {
+          amount: fireResistantConstructionCost,
+          ratePerM2: getFireResistantConstructionCostPerM2(floorPlanSummary.facilityType),
+          totalAreaSqm: floorPlanSummary.totalAreaSqm,
+          facilityTypeLabel: FACILITY_TYPE_LABELS[floorPlanSummary.facilityType],
+        }
+      : null;
   const [submitted, setSubmitted] = useState(false);
   const [activeEquipment, setActiveEquipment] = useState(EQUIPMENT_LIST[0]);
 
@@ -54,6 +73,7 @@ export default function EquipmentSelectionPage() {
             equipmentList={EQUIPMENT_LIST}
             summary={summary}
             totalCost={totalCost}
+            fireResistantConstructionCost={fireResistantConstructionCostInfo}
           />
         </div>
       ) : (

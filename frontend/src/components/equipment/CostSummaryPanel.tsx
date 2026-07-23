@@ -6,11 +6,25 @@ import type {
   EquipmentSelectionSummary,
 } from "@/types/equipmentSelection";
 
+export type FireResistantConstructionCostInfo = {
+  amount: number;
+  ratePerM2: number;
+  totalAreaSqm: number;
+  facilityTypeLabel: string;
+};
+
 type CostSummaryPanelProps = {
   equipmentList: EquipmentName[];
   summary: EquipmentSelectionSummary;
   totalCost: number;
+  /** Null when the floor plan isn't marked as fire-resistant (내화구조) — no construction-cost line item applies. */
+  fireResistantConstructionCost: FireResistantConstructionCostInfo | null;
 };
+
+// Slate, distinct from the equipment categorical palette, so the
+// construction-cost line item never gets confused with an equipment item.
+const CONSTRUCTION_COST_COLOR = "#64748b";
+const CONSTRUCTION_COST_LABEL = "내화구조 공사비";
 
 const BAR_COLOR = "#2a78d6";
 const BAR_COLOR_HOVER = "#256abf";
@@ -57,8 +71,10 @@ export default function CostSummaryPanel({
   equipmentList,
   summary,
   totalCost,
+  fireResistantConstructionCost,
 }: CostSummaryPanelProps) {
   const [hovered, setHovered] = useState<EquipmentName | null>(null);
+  const [hoveredConstruction, setHoveredConstruction] = useState(false);
   const [hoveredSlice, setHoveredSlice] = useState<string | null>(null);
 
   const rows = equipmentList.map((name) => ({ name, ...summary[name] }));
@@ -74,7 +90,14 @@ export default function CostSummaryPanel({
   const unselectedCount = rows.filter((row) => row.productId === null).length;
   const confirmedCount = pricedRows.length;
 
-  const maxValue = Math.max(...pricedRows.map((row) => row.lineTotal ?? 0), 1);
+  const hasConstructionCost = (fireResistantConstructionCost?.amount ?? 0) > 0;
+  const hasAnyCostRow = pricedRows.length > 0 || hasConstructionCost;
+
+  const maxValue = Math.max(
+    ...pricedRows.map((row) => row.lineTotal ?? 0),
+    fireResistantConstructionCost?.amount ?? 0,
+    1
+  );
 
   const colorByEquipment: Partial<Record<EquipmentName, string>> = {};
   equipmentList.forEach((name, index) => {
@@ -83,11 +106,23 @@ export default function CostSummaryPanel({
 
   const slices = pricedRows
     .map((row) => ({
-      key: row.name,
-      label: row.name,
+      key: row.name as string,
+      label: row.name as string,
       value: row.lineTotal ?? 0,
       color: colorByEquipment[row.name] as string,
     }))
+    .concat(
+      hasConstructionCost
+        ? [
+            {
+              key: CONSTRUCTION_COST_LABEL,
+              label: CONSTRUCTION_COST_LABEL,
+              value: fireResistantConstructionCost!.amount,
+              color: CONSTRUCTION_COST_COLOR,
+            },
+          ]
+        : []
+    )
     .sort((a, b) => b.value - a.value);
 
   const { result: drawnSlices } = slices.reduce<{
@@ -150,12 +185,49 @@ export default function CostSummaryPanel({
 
       <div className="flex flex-col gap-2">
         <h3 className="text-xs font-medium text-gray-500">설비별 비용</h3>
-        {pricedRows.length === 0 ? (
+        {!hasAnyCostRow ? (
           <p className="rounded-md border border-gray-100 bg-gray-50 px-3 py-4 text-center text-xs text-gray-400">
             가격이 확정된 선택 항목이 없습니다.
           </p>
         ) : (
           <div className="flex flex-col gap-1.5">
+            {hasConstructionCost && (
+              <div
+                tabIndex={0}
+                className="group relative flex items-center gap-3 outline-none"
+                onMouseEnter={() => setHoveredConstruction(true)}
+                onMouseLeave={() => setHoveredConstruction(false)}
+                onFocus={() => setHoveredConstruction(true)}
+                onBlur={() => setHoveredConstruction(false)}
+              >
+                <div className="w-24 shrink-0 truncate text-xs text-gray-600" title={CONSTRUCTION_COST_LABEL}>
+                  {CONSTRUCTION_COST_LABEL}
+                </div>
+                <div className="relative h-6 flex-1 rounded bg-gray-100">
+                  <div
+                    className="h-6 rounded-r-[4px] transition-colors"
+                    style={{
+                      width: `${(fireResistantConstructionCost!.amount / maxValue) * 100}%`,
+                      backgroundColor: CONSTRUCTION_COST_COLOR,
+                    }}
+                  />
+                </div>
+                <div className="w-24 shrink-0 text-right text-xs font-medium text-gray-800 tabular-nums">
+                  {fireResistantConstructionCost!.amount.toLocaleString()}원
+                </div>
+
+                {hoveredConstruction && (
+                  <div className="absolute -top-9 left-24 z-10 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 shadow-md">
+                    <span className="font-semibold text-gray-900">
+                      {fireResistantConstructionCost!.amount.toLocaleString()}원
+                    </span>{" "}
+                    · {fireResistantConstructionCost!.facilityTypeLabel} ·{" "}
+                    {fireResistantConstructionCost!.ratePerM2.toLocaleString()}원/㎡ ×{" "}
+                    {fireResistantConstructionCost!.totalAreaSqm.toFixed(1)}㎡
+                  </div>
+                )}
+              </div>
+            )}
             {pricedRows.map((row) => (
               <div
                 key={row.name}
@@ -337,6 +409,25 @@ export default function CostSummaryPanel({
                   </td>
                 </tr>
               ))}
+              {hasConstructionCost && (
+                <tr className="border-b border-gray-100 last:border-0 bg-slate-50/60">
+                  <td className="px-3 py-1.5 font-medium text-gray-800">
+                    {CONSTRUCTION_COST_LABEL}
+                  </td>
+                  <td className="px-3 py-1.5 text-gray-600">
+                    {fireResistantConstructionCost!.facilityTypeLabel} 기준
+                  </td>
+                  <td className="px-3 py-1.5 text-gray-600 tabular-nums">
+                    {fireResistantConstructionCost!.ratePerM2.toLocaleString()}원/㎡
+                  </td>
+                  <td className="px-3 py-1.5 text-gray-600 tabular-nums">
+                    {fireResistantConstructionCost!.totalAreaSqm.toFixed(1)}㎡
+                  </td>
+                  <td className="px-3 py-1.5 font-medium text-gray-800 tabular-nums">
+                    {fireResistantConstructionCost!.amount.toLocaleString()}원
+                  </td>
+                </tr>
+              )}
             </tbody>
             <tfoot>
               <tr className="border-t border-gray-200 bg-gray-50">

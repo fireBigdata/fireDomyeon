@@ -9,10 +9,12 @@ import {
   planApartmentExtinguisherPlacement,
   planNonApartmentExtinguisherPlacement,
 } from "@/lib/extinguisherPlacement";
+import { isResidentialUnitFacility } from "@/lib/facilityRules";
 
 export type ExtinguisherSummary =
   | {
-      facilityType: "house";
+      kind: "area";
+      facilityType: Exclude<FacilityType, "apartment" | "villa">;
       totalFloorArea: number;
       abilityUnitsPerExtinguisher: number;
       requiredAbilityUnits: number;
@@ -22,7 +24,8 @@ export type ExtinguisherSummary =
       byStructure: StructureExtinguisherSummary[];
     }
   | {
-      facilityType: "apartment";
+      kind: "residentialUnit";
+      facilityType: "apartment" | "villa";
       livingRoomCount: number;
       corridorCount: number;
       finalCount: number;
@@ -49,11 +52,12 @@ export function useExtinguisherPlacement(
       return;
     }
 
-    if (facilityType === "apartment") {
+    if (isResidentialUnitFacility(facilityType)) {
       const result = planApartmentExtinguisherPlacement(floor, scale, selectedProduct.id);
       setError(null);
       setSummary({
-        facilityType: "apartment",
+        kind: "residentialUnit",
+        facilityType,
         livingRoomCount: result.livingRoomCount,
         corridorCount: result.corridorCount,
         finalCount: result.finalCount,
@@ -73,11 +77,13 @@ export function useExtinguisherPlacement(
       scale,
       selectedProduct.abilityUnit,
       selectedProduct.id,
-      isFireResistantStructure
+      isFireResistantStructure,
+      facilityType
     );
     setError(null);
     setSummary({
-      facilityType: "house",
+      kind: "area",
+      facilityType,
       totalFloorArea: result.totalFloorArea,
       abilityUnitsPerExtinguisher: result.abilityUnitsPerExtinguisher,
       requiredAbilityUnits: result.requiredAbilityUnits,
