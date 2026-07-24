@@ -7,7 +7,7 @@ MODEL_PATH = Path(__file__).resolve().parent / "equipment_predictor.joblib"
 
 # Order the model was trained on (fireBigdata/fire-equipment-predictor,
 # notebooks/apt_equipment_model.ipynb). The model itself only stores an
-# array of 9 predictions with no column labels, so this order must be kept
+# array of 11 predictions with no column labels, so this order must be kept
 # in sync with that notebook's FEATURES/TARGETS lists by hand.
 FEATURES = ["지상층수", "지하층수", "건축면적", "연면적", "대지면적"]
 TARGETS = [
@@ -16,6 +16,8 @@ TARGETS = [
     "예비펌프",
     "주펌프",
     "충압펌프",
+    "댐퍼",
+    "창문폐쇄",
     "급기휀",
     "배기휀",
     "자동폐쇄",
@@ -25,7 +27,11 @@ TARGETS = [
 # Only these 7 have no drawing-based auto-placement logic in this app yet
 # (감지기/소화전 are already computed from NFTC formulas elsewhere and are
 # intentionally excluded here) — maps the model's training-data column name
-# to this app's EquipmentName literal.
+# to this app's EquipmentName literal. 댐퍼/창문폐쇄 are new TARGETS as of the
+# 2026-07-24 fire-equipment-predictor retrain but have no corresponding
+# EquipmentName in this app yet, so they're read into TARGETS (to keep this
+# list matching the model's output order) but left out of this mapping and
+# therefore out of the API response until the app gains those equipment types.
 TARGET_TO_EQUIPMENT_NAME = {
     "예비펌프": "예비펌프",
     "주펌프": "주펌프",
@@ -48,7 +54,8 @@ def predict_equipment_counts(
 ) -> dict[str, float]:
     """Predicts installed counts for the 7 equipment types this app has no
     placement logic for, from building-scale inputs. Reference-only estimate:
-    the underlying model was trained on 99 samples (see fire-equipment-predictor's
+    the underlying model was trained on 110 rows (102 matched buildings, some
+    joined into extra rows by duplicate filenames — see fire-equipment-predictor's
     docs/모델_학습_보고서.md) and is not accurate enough to replace a real count.
     """
     x = pd.DataFrame(
