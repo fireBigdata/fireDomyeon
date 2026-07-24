@@ -41,10 +41,10 @@ describe("getExtinguisherAreaPerUnit", () => {
     }
   });
 
-  it("covers every non-residential-unit facility type with no gaps", () => {
+  it("covers every facility type with no gaps", () => {
     const keys = Object.keys(EXTINGUISHER_AREA_PER_UNIT_M2);
     expect(keys.sort()).toEqual(
-      ["house", "commercial", "hospital", "school", "subway", "factory", "warehouse"].sort()
+      ["apartment", "villa", "house", "commercial", "hospital", "school", "subway", "factory", "warehouse"].sort()
     );
   });
 });
