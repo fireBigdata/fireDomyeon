@@ -23,9 +23,10 @@ function distance(a: Point, b: Point): number {
 /**
  * A structure's own span length, in pixels — the longer side of its
  * bounding box. Stands in for a real corridor/passage centerline length,
- * which the data model doesn't track yet.
+ * which the data model doesn't track yet. Exported for reuse by other
+ * structure-span-based placement rules (e.g. smokeDetectorPlacement.ts).
  */
-function spanLengthPx(structure: Structure): number {
+export function spanLengthPx(structure: Structure): number {
   return Math.max(structure.width, structure.height);
 }
 
@@ -51,8 +52,8 @@ function centerlineEndpoints(structure: Structure): [Point, Point] {
   ];
 }
 
-/** `count` evenly spaced points along a structure's centerline (both endpoints included when count >= 2). */
-function pointsAlongCenterline(structure: Structure, count: number): Point[] {
+/** `count` evenly spaced points along a structure's centerline (both endpoints included when count >= 2). Exported for reuse by other structure-span-based placement rules. */
+export function pointsAlongCenterline(structure: Structure, count: number): Point[] {
   if (count <= 0) return [];
   const [start, end] = centerlineEndpoints(structure);
   if (count === 1) {

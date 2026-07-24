@@ -1,4 +1,5 @@
-import type { Floor, Structure } from "@/types/floorplan";
+import { RoomType } from "@/types/floorplan";
+import type { FacilityType, Floor, Structure } from "@/types/floorplan";
 import type { HeatDetector } from "@/types/heatDetector";
 import { HeatDetectorType } from "@/types/heatDetector";
 import { createId } from "@/lib/id";
@@ -6,6 +7,16 @@ import { pixelAreaToSquareMeters } from "@/lib/area";
 import { computeEffectivePixelArea, computeLeafBoxes, type Box } from "@/lib/partitionTree";
 import { getHeatDetectorTypeForRoom } from "@/constants/heatDetectorTypes";
 import { getObstaclesNear, moveOffObstacles } from "@/lib/obstacleAvoidance";
+import { isResidentialUnitFacility } from "@/lib/facilityRules";
+
+// NFTC 608(공동주택의 화재안전기술기준) 2.7.1.3: 공동주택 세대 내 거실
+// (취침용도 방 및 거실)에는 열감지기가 아니라 연기감지기를 설치해야 한다 —
+// smokeDetectorPlacement.ts가 이 두 방 유형을 대신 담당하므로 apartment/villa
+// 에서는 여기서 건너뛴다.
+const APARTMENT_SMOKE_DETECTOR_ROOM_TYPES: ReadonlySet<RoomType> = new Set([
+  RoomType.BEDROOM,
+  RoomType.LIVING,
+]);
 
 export type CoverageAreaByDetectorType = Record<HeatDetectorType, number>;
 
@@ -182,18 +193,28 @@ export function calculateRoomDetectorPositions(
  * Computes and places heat detectors for every Room on the given floor.
  * Pure function: does not touch React state — callers decide how to merge
  * the result with any existing (e.g. manually placed) detectors.
+ *
+ * `facilityType`가 공동주택(apartment/villa)이면 침실·거실은 건너뛴다 — NFTC
+ * 608 2.7.1.3에 따라 그 방들은 열감지기가 아니라 연기감지기 대상이라
+ * smokeDetectorPlacement.ts가 대신 배치한다.
  */
 export function autoPlaceHeatDetectors(
   floor: Floor,
   coverageAreaByType: CoverageAreaByDetectorType,
-  scale: number
+  scale: number,
+  facilityType: FacilityType
 ): HeatDetector[] {
   validateCoverageArea(coverageAreaByType[HeatDetectorType.DIFFERENTIAL]);
   validateCoverageArea(coverageAreaByType[HeatDetectorType.FIXED_TEMPERATURE]);
 
+  const skipToSmokeDetector = isResidentialUnitFacility(facilityType);
+
   const detectors: HeatDetector[] = [];
   for (const room of floor.structures) {
     if (room.type !== "room") continue;
+    if (skipToSmokeDetector && APARTMENT_SMOKE_DETECTOR_ROOM_TYPES.has(room.roomType as RoomType)) {
+      continue;
+    }
 
     const type = getHeatDetectorTypeForRoom(room.roomType);
     const coverageArea = coverageAreaByType[type];

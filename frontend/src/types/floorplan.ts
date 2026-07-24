@@ -1,6 +1,7 @@
 import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { HeatDetector } from "@/types/heatDetector";
 import type { ExitLight } from "@/types/exitLight";
+import type { SmokeDetector } from "@/types/smokeDetector";
 import { SprinklerHazardClass } from "@/types/sprinkler";
 import type { SprinklerHead } from "@/types/sprinkler";
 import type { HydrantPlacement } from "@/types/hydrant";
@@ -13,8 +14,10 @@ export type StructureType =
   | "stairs"
   | "obstacle";
 
-// apartment/villa: 공동주택(아파트/연립·다세대주택) — 세대별 room/corridor 개수
-// 기준 소화기 배치, 주거용 스프링클러헤드 적용.
+// apartment/villa: 공동주택(아파트/연립·다세대주택) — NFTC 608(공동주택의
+// 화재안전기술기준) 적용. 소화기는 면적기준(100㎡당 1단위, 2.1.1)으로
+// 비주거 용도와 같은 파이프라인을 쓰고, 세대 내 침실·거실은 열감지기 대신
+// 연기감지기(2.7.1.3), 스프링클러는 주거용 헤드(수평거리 2.6m, 2.3.1.4)를 쓴다.
 // house: 단독주택 — 스프링클러 설치대상 아님(lib/sprinklerRules.ts).
 // commercial/hospital/school/subway/factory/warehouse: 비주거 특정소방대상물 —
 // 면적/능력단위 기준 소화기 배치, 일반기준(2.1/2.3m) 스프링클러 적용. 이 앱은
@@ -107,6 +110,7 @@ export type Floor = {
   extinguisherPlacements: ExtinguisherPlacement[];
   heatDetectors: HeatDetector[];
   exitLights: ExitLight[];
+  smokeDetectors: SmokeDetector[];
   sprinklerHeads: SprinklerHead[];
   hydrantPlacements: HydrantPlacement[];
 };
@@ -145,11 +149,19 @@ export type FloorPlanState = {
   selectedPartitionId: string | null;
   selectedHeatDetectorId: string | null;
   selectedExitLightId: string | null;
+  selectedSmokeDetectorId: string | null;
   selectedSprinklerHeadId: string | null;
   selectedHydrantId: string | null;
   scale: number;
 };
 
-export type { ExtinguisherPlacement, HeatDetector, ExitLight, SprinklerHead, HydrantPlacement };
+export type {
+  ExtinguisherPlacement,
+  HeatDetector,
+  ExitLight,
+  SmokeDetector,
+  SprinklerHead,
+  HydrantPlacement,
+};
 export { HeatDetectorType } from "@/types/heatDetector";
 export { SprinklerHazardClass, SprinklerHeadType, SprinklerComplianceStatus } from "@/types/sprinkler";

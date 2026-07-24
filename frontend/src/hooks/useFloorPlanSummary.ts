@@ -22,6 +22,7 @@ export type FloorEquipmentSummary = {
   extinguisherCount: number;
   heatDetectorCount: number;
   heatDetectorCountsByType: HeatDetectorTypeCounts;
+  smokeDetectorCount: number;
   exitLightCountsByCategory: ExitLightCategoryCounts;
   sprinklerHeadCount: number;
   hydrantCount: number;
@@ -42,6 +43,7 @@ export type FloorPlanSummary = {
   totalExtinguisherCount: number;
   totalHeatDetectorCount: number;
   totalHeatDetectorCountsByType: HeatDetectorTypeCounts;
+  totalSmokeDetectorCount: number;
   totalExitLightCountsByCategory: ExitLightCategoryCounts;
   totalSprinklerHeadCount: number;
   totalHydrantCount: number;
@@ -88,6 +90,7 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     extinguisherCount: floor.extinguisherPlacements?.length ?? 0,
     heatDetectorCount: floor.heatDetectors?.length ?? 0,
     heatDetectorCountsByType: countHeatDetectorsByType(floor.heatDetectors),
+    smokeDetectorCount: floor.smokeDetectors?.length ?? 0,
     exitLightCountsByCategory: countExitLightsByCategory(floor.exitLights),
     sprinklerHeadCount: floor.sprinklerHeads?.length ?? 0,
     hydrantCount: floor.hydrantPlacements?.length ?? 0,
@@ -138,6 +141,7 @@ function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
     totalExtinguisherCount: byFloor.reduce((sum, f) => sum + f.extinguisherCount, 0),
     totalHeatDetectorCount: byFloor.reduce((sum, f) => sum + f.heatDetectorCount, 0),
     totalHeatDetectorCountsByType,
+    totalSmokeDetectorCount: byFloor.reduce((sum, f) => sum + f.smokeDetectorCount, 0),
     totalExitLightCountsByCategory,
     totalSprinklerHeadCount: byFloor.reduce((sum, f) => sum + f.sprinklerHeadCount, 0),
     totalHydrantCount: byFloor.reduce((sum, f) => sum + f.hydrantCount, 0),

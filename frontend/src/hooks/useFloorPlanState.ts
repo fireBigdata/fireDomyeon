@@ -18,6 +18,7 @@ import {
   type StructureType,
 } from "@/types/floorplan";
 import type { ExitLight, ExitLightCategory } from "@/types/exitLight";
+import type { SmokeDetector, SmokeDetectorCategory } from "@/types/smokeDetector";
 import type { HydrantPlacement } from "@/types/hydrant";
 import { createStructure } from "@/lib/structureFactory";
 import type { StructureRect } from "@/lib/structureFactory";
@@ -46,6 +47,7 @@ function createFreshState(): FloorPlanState {
     selectedPartitionId: null,
     selectedHeatDetectorId: null,
     selectedExitLightId: null,
+    selectedSmokeDetectorId: null,
     selectedSprinklerHeadId: null,
     selectedHydrantId: null,
     scale: 1,
@@ -58,6 +60,11 @@ const VALID_EXIT_LIGHT_CATEGORIES = new Set<ExitLightCategory>([
   "EXIT",
   "CORRIDOR",
   "STAIRS",
+]);
+const VALID_SMOKE_DETECTOR_CATEGORIES = new Set<SmokeDetectorCategory>([
+  "CORRIDOR",
+  "STAIRS",
+  "ELEVATOR",
 ]);
 
 // Backfills array fields a floor may be missing if it was saved by an older
@@ -80,6 +87,9 @@ function normalizeFloor(floor: Partial<Floor>): Floor {
       : [],
     exitLights: Array.isArray(floor.exitLights)
       ? floor.exitLights.filter((l) => VALID_EXIT_LIGHT_CATEGORIES.has(l?.category))
+      : [],
+    smokeDetectors: Array.isArray(floor.smokeDetectors)
+      ? floor.smokeDetectors.filter((d) => VALID_SMOKE_DETECTOR_CATEGORIES.has(d?.category))
       : [],
     sprinklerHeads: Array.isArray(floor.sprinklerHeads)
       ? floor.sprinklerHeads.filter((h) => VALID_SPRINKLER_HEAD_TYPES.has(h?.headType))
@@ -238,6 +248,11 @@ export function useFloorPlanState(initial?: FloorPlanState) {
           .filter((light) => light.structureId === id)
           .map((light) => light.id)
       );
+      const removedSmokeDetectorIds = new Set(
+        floor.smokeDetectors
+          .filter((detector) => detector.structureId === id)
+          .map((detector) => detector.id)
+      );
       const removedSprinklerHeadIds = new Set(
         floor.sprinklerHeads
           .filter((head) => head.roomId === id)
@@ -266,6 +281,9 @@ export function useFloorPlanState(initial?: FloorPlanState) {
                 exitLights: f.exitLights.filter(
                   (light) => light.structureId !== id
                 ),
+                smokeDetectors: f.smokeDetectors.filter(
+                  (detector) => detector.structureId !== id
+                ),
                 sprinklerHeads: f.sprinklerHeads.filter(
                   (head) => head.roomId !== id
                 ),
@@ -292,6 +310,11 @@ export function useFloorPlanState(initial?: FloorPlanState) {
           removedExitLightIds.has(prev.selectedExitLightId)
             ? null
             : prev.selectedExitLightId,
+        selectedSmokeDetectorId:
+          prev.selectedSmokeDetectorId &&
+          removedSmokeDetectorIds.has(prev.selectedSmokeDetectorId)
+            ? null
+            : prev.selectedSmokeDetectorId,
         selectedSprinklerHeadId:
           prev.selectedSprinklerHeadId &&
           removedSprinklerHeadIds.has(prev.selectedSprinklerHeadId)
@@ -349,6 +372,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
       selectedExitLightId: null,
+      selectedSmokeDetectorId: null,
       selectedSprinklerHeadId: null,
       selectedHydrantId: null,
     }));
@@ -494,6 +518,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
+        selectedSmokeDetectorId: null,
         selectedSprinklerHeadId: null,
         selectedHydrantId: null,
       };
@@ -514,6 +539,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
+        selectedSmokeDetectorId: null,
         selectedSprinklerHeadId: null,
         selectedHydrantId: null,
       };
@@ -535,6 +561,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         selectedPartitionId: null,
         selectedHeatDetectorId: null,
         selectedExitLightId: null,
+        selectedSmokeDetectorId: null,
         selectedSprinklerHeadId: null,
         selectedHydrantId: null,
       };
@@ -562,6 +589,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
               extinguisherPlacements: [],
               heatDetectors: [],
               exitLights: [],
+              smokeDetectors: [],
               sprinklerHeads: [],
               hydrantPlacements: [],
             }
@@ -572,6 +600,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
       selectedExitLightId: null,
+      selectedSmokeDetectorId: null,
       selectedSprinklerHeadId: null,
       selectedHydrantId: null,
     }));
@@ -592,6 +621,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       selectedPartitionId: null,
       selectedHeatDetectorId: null,
       selectedExitLightId: null,
+      selectedSmokeDetectorId: null,
       selectedSprinklerHeadId: null,
       selectedHydrantId: null,
     }));
@@ -650,6 +680,26 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         ],
       }));
       setState((prev) => ({ ...prev, selectedExitLightId: null }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const selectSmokeDetector = useCallback((id: string | null) => {
+    setState((prev) => ({ ...prev, selectedSmokeDetectorId: id }));
+  }, []);
+
+  const setSmokeDetectors = useCallback(
+    (detectors: SmokeDetector[]) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        // Re-placing replaces only the previous auto-placed batch; any
+        // manually placed detectors (isAutoPlaced === false) are kept.
+        smokeDetectors: [
+          ...floor.smokeDetectors.filter((detector) => !detector.isAutoPlaced),
+          ...detectors,
+        ],
+      }));
+      setState((prev) => ({ ...prev, selectedSmokeDetectorId: null }));
     },
     [updateCurrentFloor]
   );
@@ -750,6 +800,8 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setHeatDetectors,
     selectExitLight,
     setExitLights,
+    selectSmokeDetector,
+    setSmokeDetectors,
     selectSprinklerHead,
     setSprinklerHeads,
     selectHydrant,

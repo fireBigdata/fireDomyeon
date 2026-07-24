@@ -5,6 +5,7 @@ import type { EquipmentProduct } from "@/types/equipmentSelection";
 import type { HeatDetectorSummary } from "@/hooks/useHeatDetectorPlacement";
 import type { ExtinguisherSummary } from "@/hooks/useExtinguisherPlacement";
 import type { ExitLightSummary } from "@/lib/exitLightPlacement";
+import type { SmokeDetectorSummary } from "@/lib/smokeDetectorPlacement";
 import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import type { HydrantSummary } from "@/hooks/useHydrantPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
@@ -17,6 +18,7 @@ import AutoPlaceAllButton from "@/components/panels/AutoPlaceAllButton";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 import ExitLightPanel from "@/components/panels/ExitLightPanel";
+import SmokeDetectorPanel from "@/components/panels/SmokeDetectorPanel";
 import SprinklerPanel from "@/components/panels/SprinklerPanel";
 import HydrantPanel from "@/components/panels/HydrantPanel";
 
@@ -36,6 +38,10 @@ type LeftPanelProps = {
   heatDetectorSummary: HeatDetectorSummary | null;
   onAutoPlaceExitLights: () => void;
   exitLightSummary: ExitLightSummary | null;
+  selectedSmokeDetectorProduct: EquipmentProduct | null;
+  smokeDetectorError: string | null;
+  onAutoPlaceSmokeDetectors: () => void;
+  smokeDetectorSummary: SmokeDetectorSummary | null;
   isFireResistantStructure: boolean;
   onFireResistantStructureChange: (value: boolean) => void;
   buildingScale: BuildingScaleFields;
@@ -65,6 +71,10 @@ export default function LeftPanel({
   heatDetectorSummary,
   onAutoPlaceExitLights,
   exitLightSummary,
+  selectedSmokeDetectorProduct,
+  smokeDetectorError,
+  onAutoPlaceSmokeDetectors,
+  smokeDetectorSummary,
   isFireResistantStructure,
   onFireResistantStructureChange,
   buildingScale,
@@ -102,6 +112,12 @@ export default function LeftPanel({
         summary={heatDetectorSummary}
       />
       <ExitLightPanel onAutoPlace={onAutoPlaceExitLights} summary={exitLightSummary} />
+      <SmokeDetectorPanel
+        selectedProduct={selectedSmokeDetectorProduct}
+        error={smokeDetectorError}
+        onAutoPlace={onAutoPlaceSmokeDetectors}
+        summary={smokeDetectorSummary}
+      />
       <SprinklerPanel onAutoPlace={onAutoPlaceSprinklers} summary={sprinklerSummary} />
       <HydrantPanel
         selectedProduct={selectedHydrantProduct}

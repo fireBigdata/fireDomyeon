@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  calculateApartmentExtinguisherCount,
-  calculateCorridorExtinguisherCount,
   calculateExtinguisherCountByAbility,
   calculateRequiredAbilityUnits,
   calculateTotalFloorArea,
   findAreasBeyondMaximumDistance,
   placeExtinguishersNearWalls,
-  planApartmentExtinguisherPlacement,
-  planNonApartmentExtinguisherPlacement,
+  planExtinguisherPlacement,
 } from "@/lib/extinguisherPlacement";
 import { RoomType } from "@/types/floorplan";
 import type { Floor, Structure } from "@/types/floorplan";
@@ -26,18 +23,6 @@ function makeRoom(overrides: Partial<Structure> = {}): Structure {
   };
 }
 
-function makeCorridor(overrides: Partial<Structure> = {}): Structure {
-  return {
-    id: "corridor-1",
-    type: "corridor",
-    x: 0,
-    y: 0,
-    width: 220,
-    height: 50,
-    ...overrides,
-  };
-}
-
 function makeFloor(structures: Structure[]): Floor {
   return {
     id: "floor-1",
@@ -46,6 +31,7 @@ function makeFloor(structures: Structure[]): Floor {
     extinguisherPlacements: [],
     heatDetectors: [],
     exitLights: [],
+    smokeDetectors: [],
     sprinklerHeads: [],
     hydrantPlacements: [],
   };
@@ -88,95 +74,11 @@ describe("calculateRequiredAbilityUnits + calculateExtinguisherCountByAbility", 
   });
 });
 
-describe("calculateCorridorExtinguisherCount", () => {
-  it.each([
-    [20, 1],
-    [21, 2],
-    [40, 2],
-    [41, 3],
-  ])("corridor length %dm -> %d개", (lengthMeters, expected) => {
-    expect(calculateCorridorExtinguisherCount(lengthMeters)).toBe(expected);
-  });
-});
-
-describe("calculateApartmentExtinguisherCount", () => {
-  it("gives each living room exactly one extinguisher", () => {
-    const oneRoom = [makeRoom({ id: "living-1" })];
-    expect(calculateApartmentExtinguisherCount(oneRoom, 1)).toBe(1);
-
-    const threeRooms = [
-      makeRoom({ id: "living-1" }),
-      makeRoom({ id: "living-2", x: 200 }),
-      makeRoom({ id: "living-3", x: 400 }),
-    ];
-    expect(calculateApartmentExtinguisherCount(threeRooms, 1)).toBe(3);
-  });
-
-  it("does not count non-living rooms", () => {
-    const structures = [
-      makeRoom({ id: "kitchen", roomType: RoomType.KITCHEN }),
-      makeRoom({ id: "boiler", roomType: RoomType.BOILER, x: 200 }),
-    ];
-    expect(calculateApartmentExtinguisherCount(structures, 1)).toBe(0);
-  });
-
-  it("adds ceil(corridorLength / 20) per corridor, using the longer side", () => {
-    // PIXELS_PER_METER = 30, so a 600px corridor is 20m -> 1, 630px is 21m -> 2.
-    const twentyMeterCorridor = [makeCorridor({ width: 600, height: 50 })];
-    expect(calculateApartmentExtinguisherCount(twentyMeterCorridor, 1)).toBe(1);
-
-    const twentyOneMeterCorridor = [makeCorridor({ width: 630, height: 50 })];
-    expect(calculateApartmentExtinguisherCount(twentyOneMeterCorridor, 1)).toBe(2);
-  });
-
-  it("combines living rooms and corridors", () => {
-    const structures = [
-      makeRoom({ id: "living-1" }),
-      makeRoom({ id: "living-2", x: 200 }),
-      makeCorridor({ id: "corridor-1", width: 600, height: 50, x: 0, y: 300 }),
-    ];
-    expect(calculateApartmentExtinguisherCount(structures, 1)).toBe(3);
-  });
-});
-
-describe("planApartmentExtinguisherPlacement", () => {
-  it("places exactly one extinguisher per living room, inside the room", () => {
-    const room = makeRoom({ id: "living-1", x: 50, y: 60, width: 120, height: 100 });
-    const floor = makeFloor([room]);
-
-    const result = planApartmentExtinguisherPlacement(floor, 1, "A");
-
-    expect(result.livingRoomCount).toBe(1);
-    expect(result.corridorCount).toBe(0);
-    expect(result.finalCount).toBe(1);
-    expect(result.placements).toHaveLength(1);
-
-    const [placement] = result.placements;
-    expect(placement.structureId).toBe("living-1");
-    expect(placement.isAutoPlaced).toBe(true);
-    expect(placement.x).toBeGreaterThanOrEqual(room.x);
-    expect(placement.x).toBeLessThanOrEqual(room.x + room.width);
-    expect(placement.y).toBeGreaterThanOrEqual(room.y);
-    expect(placement.y).toBeLessThanOrEqual(room.y + room.height);
-  });
-
-  it("places ceil(length/20) extinguishers along a corridor", () => {
-    const corridor = makeCorridor({ id: "corridor-1", x: 0, y: 0, width: 630, height: 50 }); // 21m
-    const floor = makeFloor([corridor]);
-
-    const result = planApartmentExtinguisherPlacement(floor, 1, "A");
-
-    expect(result.corridorCount).toBe(2);
-    expect(result.finalCount).toBe(2);
-    expect(result.placements.every((p) => p.structureId === "corridor-1")).toBe(true);
-  });
-});
-
-describe("planNonApartmentExtinguisherPlacement", () => {
+describe("planExtinguisherPlacement", () => {
   it("throws instead of computing anything for an invalid ability-units input", () => {
     const floor = makeFloor([makeRoom()]);
-    expect(() => planNonApartmentExtinguisherPlacement(floor, 1, 0, "A")).toThrow();
-    expect(() => planNonApartmentExtinguisherPlacement(floor, 1, -2, "A")).toThrow();
+    expect(() => planExtinguisherPlacement(floor, 1, 0, "A")).toThrow();
+    expect(() => planExtinguisherPlacement(floor, 1, -2, "A")).toThrow();
   });
 
   it("computes the minimum count from floor area and ability units", () => {
@@ -184,7 +86,7 @@ describe("planNonApartmentExtinguisherPlacement", () => {
     const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 300, height: 300 });
     const floor = makeFloor([room]);
 
-    const result = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A");
+    const result = planExtinguisherPlacement(floor, 1, 1, "A");
 
     expect(calculateTotalFloorArea(floor.structures, 1)).toBeCloseTo(100);
     expect(result.requiredAbilityUnits).toBe(1);
@@ -197,7 +99,7 @@ describe("planNonApartmentExtinguisherPlacement", () => {
     const bigRoom = makeRoom({ id: "big-room", x: 0, y: 0, width: 3000, height: 3000 });
     const floor = makeFloor([bigRoom]);
 
-    const result = planNonApartmentExtinguisherPlacement(floor, 1, 100, "A");
+    const result = planExtinguisherPlacement(floor, 1, 100, "A");
 
     expect(result.addedByDistanceRule).toBeGreaterThan(0);
     expect(result.finalCount).toBe(result.minimumCountByArea + result.addedByDistanceRule);
@@ -221,7 +123,7 @@ describe("planNonApartmentExtinguisherPlacement", () => {
     const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 480, height: 480 });
     const floor = makeFloor([room]);
 
-    const result = planNonApartmentExtinguisherPlacement(floor, 1, 1000, "A");
+    const result = planExtinguisherPlacement(floor, 1, 1000, "A");
 
     const remainingGaps = findAreasBeyondMaximumDistance(floor, result.placements, 20, 1);
     expect(remainingGaps).toHaveLength(0);
@@ -234,7 +136,7 @@ describe("planNonApartmentExtinguisherPlacement", () => {
     ];
     const floor = makeFloor(rooms);
 
-    const result = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A");
+    const result = planExtinguisherPlacement(floor, 1, 1, "A");
     const byId = new Map(rooms.map((r) => [r.id, r]));
 
     for (const placement of result.placements) {
@@ -251,7 +153,7 @@ describe("planNonApartmentExtinguisherPlacement", () => {
     const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 300, height: 300 });
     const floor = makeFloor([room]);
 
-    const result = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A");
+    const result = planExtinguisherPlacement(floor, 1, 1, "A");
 
     for (const placement of result.placements) {
       const localX = placement.x - room.x;
@@ -271,7 +173,7 @@ describe("planNonApartmentExtinguisherPlacement", () => {
     const bigRoom = makeRoom({ id: "big-room", x: 0, y: 0, width: 3000, height: 3000 });
     const floor = makeFloor([bigRoom]);
 
-    const result = planNonApartmentExtinguisherPlacement(floor, 1, 50, "A");
+    const result = planExtinguisherPlacement(floor, 1, 50, "A");
     expect(result.placements.length).toBeGreaterThan(1);
 
     for (let i = 0; i < result.placements.length; i += 1) {
@@ -315,14 +217,14 @@ describe("planNonApartmentExtinguisherPlacement", () => {
   });
 });
 
-describe("planNonApartmentExtinguisherPlacement — facility-type area-per-unit", () => {
+describe("planExtinguisherPlacement — facility-type area-per-unit", () => {
   it("hospital/school (그 밖의 것, 200㎡ group) require fewer ability units than commercial/warehouse (100㎡ group) for the same area", () => {
     // 450x300px room = 15m x 10m = 150㎡ at PIXELS_PER_METER=30.
     const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 450, height: 300 });
     const floor = makeFloor([room]);
 
-    const commercialResult = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A", undefined, "commercial");
-    const hospitalResult = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A", undefined, "hospital");
+    const commercialResult = planExtinguisherPlacement(floor, 1, 1, "A", undefined, "commercial");
+    const hospitalResult = planExtinguisherPlacement(floor, 1, 1, "A", undefined, "hospital");
 
     expect(commercialResult.requiredAbilityUnits).toBe(2); // ceil(150/100)
     expect(hospitalResult.requiredAbilityUnits).toBe(1); // ceil(150/200)
@@ -331,7 +233,7 @@ describe("planNonApartmentExtinguisherPlacement — facility-type area-per-unit"
   it("defaults to the 100㎡ group (unchanged prior behavior) when no facility type is given", () => {
     const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 450, height: 300 });
     const floor = makeFloor([room]);
-    const result = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A");
+    const result = planExtinguisherPlacement(floor, 1, 1, "A");
     expect(result.requiredAbilityUnits).toBe(2);
   });
 
@@ -340,8 +242,28 @@ describe("planNonApartmentExtinguisherPlacement — facility-type area-per-unit"
     const floor = makeFloor([room]);
 
     for (const facilityType of ["subway", "factory", "warehouse"] as const) {
-      const result = planNonApartmentExtinguisherPlacement(floor, 1, 1, "A", undefined, facilityType);
+      const result = planExtinguisherPlacement(floor, 1, 1, "A", undefined, facilityType);
       expect(result.requiredAbilityUnits).toBe(2);
     }
+  });
+
+  it("apartment/villa use the NFTC 608 2.1.1 100㎡ group, same as the general 100㎡ group", () => {
+    // 450x300px room = 15m x 10m = 150㎡ at PIXELS_PER_METER=30.
+    const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 450, height: 300 });
+    const floor = makeFloor([room]);
+
+    for (const facilityType of ["apartment", "villa"] as const) {
+      const result = planExtinguisherPlacement(floor, 1, 1, "A", undefined, facilityType);
+      expect(result.requiredAbilityUnits).toBe(2); // ceil(150/100)
+    }
+  });
+
+  it("apartment/villa area-per-unit does not double for fire-resistant structures (no such proviso in NFTC 608 2.1.1)", () => {
+    // 300x300px room = 10m x 10m = 100㎡.
+    const room = makeRoom({ id: "room-1", x: 0, y: 0, width: 300, height: 300 });
+    const floor = makeFloor([room]);
+
+    const result = planExtinguisherPlacement(floor, 1, 1, "A", true, "apartment");
+    expect(result.requiredAbilityUnits).toBe(1); // ceil(100/100), not ceil(100/200)
   });
 });

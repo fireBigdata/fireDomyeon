@@ -1,9 +1,8 @@
-import { RoomType } from "@/types/floorplan";
 import type { FacilityType, Floor, Structure } from "@/types/floorplan";
 import type { ExtinguisherPlacement } from "@/types/extinguisher";
 import type { Point } from "@/lib/heatDetectorPlacement";
 import { createId } from "@/lib/id";
-import { metersToPixelLength, pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
+import { metersToPixelLength, pixelAreaToSquareMeters } from "@/lib/area";
 import { computeLeafBoxes, type Box } from "@/lib/partitionTree";
 import { computeTotalStructurePixelArea } from "@/lib/structureArea";
 import { getObstaclesNear } from "@/lib/obstacleAvoidance";
@@ -13,7 +12,6 @@ import { STRUCTURE_DEFAULTS } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS } from "@/constants/roomTypes";
 
 const DEFAULT_AREA_PER_UNIT: ExtinguisherAreaPerUnit = { normal: 100, fireResistant: 200 };
-const CORRIDOR_LENGTH_PER_EXTINGUISHER_METERS = 20;
 export const DEFAULT_MAX_TRAVEL_DISTANCE_METERS = 20;
 
 // Grid resolution used when sampling the floor plan for 20m coverage gaps.
@@ -70,81 +68,7 @@ export function calculateExtinguisherCountByAbility(
 }
 
 // ---------------------------------------------------------------------------
-// Apartment (room/corridor count based) calculation
-// ---------------------------------------------------------------------------
-
-/**
- * Length of a corridor structure, in pixels.
- * TODO: prefer a corridor centerline/path length once that data exists on
- * Structure; this falls back to the longer side of its bounding box.
- */
-export function calculateCorridorLength(structure: Structure): number {
-  return Math.max(structure.width, structure.height);
-}
-
-export function calculateCorridorExtinguisherCount(corridorLengthMeters: number): number {
-  if (corridorLengthMeters <= 0) return 0;
-  return Math.ceil(corridorLengthMeters / CORRIDOR_LENGTH_PER_EXTINGUISHER_METERS);
-}
-
-export type ApartmentExtinguisherBreakdown = {
-  livingRoomCount: number;
-  corridorCount: number;
-  total: number;
-  byStructure: StructureExtinguisherSummary[];
-};
-
-/** 거실 1개당 1개 + 복도는 길이 20m당 1개(올림). 다른 용도의 방은 집계하지 않는다. */
-export function calculateApartmentExtinguisherBreakdown(
-  structures: Structure[],
-  scale: number
-): ApartmentExtinguisherBreakdown {
-  const byStructure: StructureExtinguisherSummary[] = [];
-  let livingRoomCount = 0;
-  let corridorCount = 0;
-
-  for (const structure of structures) {
-    if (structure.type === "room" && structure.roomType === RoomType.LIVING) {
-      livingRoomCount += 1;
-      byStructure.push({
-        structureId: structure.id,
-        label: ROOM_TYPE_DEFAULTS[RoomType.LIVING].label,
-        count: 1,
-      });
-      continue;
-    }
-
-    if (structure.type === "corridor") {
-      const lengthMeters = pixelLengthToMeters(calculateCorridorLength(structure), scale);
-      const count = calculateCorridorExtinguisherCount(lengthMeters);
-      if (count > 0) {
-        corridorCount += count;
-        byStructure.push({
-          structureId: structure.id,
-          label: STRUCTURE_DEFAULTS.corridor.label,
-          count,
-        });
-      }
-    }
-  }
-
-  return {
-    livingRoomCount,
-    corridorCount,
-    total: livingRoomCount + corridorCount,
-    byStructure,
-  };
-}
-
-export function calculateApartmentExtinguisherCount(
-  structures: Structure[],
-  scale: number
-): number {
-  return calculateApartmentExtinguisherBreakdown(structures, scale).total;
-}
-
-// ---------------------------------------------------------------------------
-// Wall-hugging placement geometry (shared by both building types)
+// Wall-hugging placement geometry
 // ---------------------------------------------------------------------------
 
 function getPlaceableStructures(structures: Structure[]): Structure[] {
@@ -227,29 +151,8 @@ export function placeExtinguishersNearWalls(
   return toPlacements(resolveOverlaps(raw), extinguisherTypeId);
 }
 
-export function placeApartmentExtinguishers(
-  floor: Floor,
-  breakdown: ApartmentExtinguisherBreakdown,
-  extinguisherTypeId: string
-): ExtinguisherPlacement[] {
-  const byId = new Map(floor.structures.map((s) => [s.id, s]));
-  const entrances = floor.structures.filter((s) => s.type === "entrance");
-
-  const raw: { point: Point; structureId: string }[] = [];
-  for (const item of breakdown.byStructure) {
-    const structure = byId.get(item.structureId);
-    if (!structure || item.count <= 0) continue;
-    const obstacles = getObstaclesNear(structure, floor.structures);
-    for (const point of placePointsInStructure(structure, item.count, entrances, undefined, obstacles)) {
-      raw.push({ point, structureId: structure.id });
-    }
-  }
-
-  return toPlacements(resolveOverlaps(raw), extinguisherTypeId);
-}
-
 // ---------------------------------------------------------------------------
-// 20m maximum-travel-distance coverage check (아파트 외 only)
+// 20m maximum-travel-distance coverage check
 // ---------------------------------------------------------------------------
 
 /**
@@ -372,7 +275,7 @@ function summarizeByStructure(
     .sort((a, b) => b.count - a.count);
 }
 
-export type NonApartmentPlacementResult = {
+export type ExtinguisherPlacementResult = {
   totalFloorArea: number;
   abilityUnitsPerExtinguisher: number;
   requiredAbilityUnits: number;
@@ -388,20 +291,22 @@ export type NonApartmentPlacementResult = {
  * 3) 도면을 일정 간격으로 샘플링 → 4) 20m 초과 지점 확인 →
  * 5) 초과 지점 인근 벽에 소화기 추가 → 6) 모두 만족할 때까지 반복.
  *
- * `facilityType`은 apartment/villa를 제외한 용도(단독주택/상가/병원/학교/
- * 지하철역/공장/창고)만 받는다 — 공동주택은 planApartmentExtinguisherPlacement
- * (세대별 거실/복도 개수 기준)를 대신 쓴다. 기본값 "house"는 기존 호출부와의
- * 하위 호환을 위한 것으로, 100㎡(내화 200㎡) 기준과 동일하다.
+ * 모든 `facilityType`에 동일한 면적/능력단위 파이프라인을 쓴다 — apartment/
+ * villa는 NFTC 608 2.1.1("바닥면적 100㎡마다 1단위")도 이와 같은 면적 기준이라
+ * `getExtinguisherAreaPerUnit`이 용도별 기준면적표(facilityRules.ts)만 바꿔
+ * 끼우면 그대로 적용된다 — 세대별 거실/복도 개수를 세는 별도 경로는 없다.
+ * 기본값 "house"는 기존 호출부와의 하위 호환을 위한 것으로, 100㎡(내화 200㎡)
+ * 기준과 동일하다.
  */
-export function planNonApartmentExtinguisherPlacement(
+export function planExtinguisherPlacement(
   floor: Floor,
   scale: number,
   abilityUnitsPerExtinguisher: number,
   extinguisherTypeId: string,
   isFireResistantStructure?: boolean,
-  facilityType: Exclude<FacilityType, "apartment" | "villa"> = "house",
+  facilityType: FacilityType = "house",
   maximumDistanceMeters: number = DEFAULT_MAX_TRAVEL_DISTANCE_METERS
-): NonApartmentPlacementResult {
+): ExtinguisherPlacementResult {
   validateAbilityUnitsPerExtinguisher(abilityUnitsPerExtinguisher);
 
   const totalFloorArea = calculateTotalFloorArea(floor.structures, scale);
@@ -456,30 +361,5 @@ export function planNonApartmentExtinguisherPlacement(
     finalCount: placements.length,
     placements,
     byStructure: summarizeByStructure(placements, floor.structures),
-  };
-}
-
-export type ApartmentPlacementResult = {
-  livingRoomCount: number;
-  corridorCount: number;
-  finalCount: number;
-  placements: ExtinguisherPlacement[];
-  byStructure: StructureExtinguisherSummary[];
-};
-
-export function planApartmentExtinguisherPlacement(
-  floor: Floor,
-  scale: number,
-  extinguisherTypeId: string
-): ApartmentPlacementResult {
-  const breakdown = calculateApartmentExtinguisherBreakdown(floor.structures, scale);
-  const placements = placeApartmentExtinguishers(floor, breakdown, extinguisherTypeId);
-
-  return {
-    livingRoomCount: breakdown.livingRoomCount,
-    corridorCount: breakdown.corridorCount,
-    finalCount: placements.length,
-    placements,
-    byStructure: breakdown.byStructure,
   };
 }

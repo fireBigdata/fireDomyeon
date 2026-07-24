@@ -10,8 +10,8 @@ import type { FacilityType } from "@/types/floorplan";
 // actually apply to most 특정소방대상물 (면적 기준), not room-by-room usage.
 //
 // IMPORTANT: verify these categorizations and area values against the
-// officially gazetted NFPC 101/103 text in effect on the applicable date —
-// this module cannot fetch the live proclamation and does not model
+// officially gazetted NFPC 101/103/608 text in effect on the applicable
+// date — this module cannot fetch the live proclamation and does not model
 // specialized provisions (e.g. 랙식창고 NFTC 609, 지하역사 특례).
 // ---------------------------------------------------------------------------
 
@@ -30,19 +30,21 @@ export type ExtinguisherAreaPerUnit = {
 };
 
 /**
- * NFTC 101 별표2 (소화기구의 능력단위기준) — 특정소방대상물 용도별 능력단위
- * 기준면적. 이 앱이 다루는 용도는 두 그룹으로 나뉜다:
- * - 100㎡(내화구조 200㎡)당 1단위: 근린생활시설(상가), 운수시설(지하철역),
- *   공장, 창고시설, 그리고 이 앱이 별도 세대별 계산을 쓰지 않는 단독주택(house).
- * - 200㎡(내화구조 400㎡)당 1단위: "그 밖의 것"에 해당하는 의료시설(병원),
+ * 소화기구 능력단위 기준면적. 용도에 따라 두 기준을 함께 쓴다:
+ * - NFTC 101 별표2 (특정소방대상물별 소화기구의 능력단위): apartment/villa를
+ *   제외한 용도. 두 그룹으로 나뉜다 — 100㎡(내화구조 200㎡)당 1단위: 근린생활
+ *   시설(상가), 운수시설(지하철역), 공장, 창고시설, 단독주택(house);
+ *   200㎡(내화구조 400㎡)당 1단위: "그 밖의 것"에 해당하는 의료시설(병원),
  *   교육연구시설(학교).
- * apartment/villa는 이 표를 쓰지 않고 세대별 거실/복도 개수 기준을 따로
- * 적용한다 (calculateApartmentExtinguisherBreakdown 참고).
+ * - NFTC 608 2.1.1 (공동주택의 화재안전기술기준): apartment/villa —
+ *   "바닥면적 100㎡마다 1단위". 세대별 거실/복도 개수 기준이 아니라 면적
+ *   기준이며, 조문에 내화구조 가산 규정이 없어 fireResistant도 동일하게
+ *   100㎡로 둔다(불명확하면 완화가 아니라 동일 기준을 유지해 과소 배치를
+ *   피한다).
  */
-export const EXTINGUISHER_AREA_PER_UNIT_M2: Record<
-  Exclude<FacilityType, "apartment" | "villa">,
-  ExtinguisherAreaPerUnit
-> = {
+export const EXTINGUISHER_AREA_PER_UNIT_M2: Record<FacilityType, ExtinguisherAreaPerUnit> = {
+  apartment: { normal: 100, fireResistant: 100 },
+  villa: { normal: 100, fireResistant: 100 },
   house: { normal: 100, fireResistant: 200 },
   commercial: { normal: 100, fireResistant: 200 },
   subway: { normal: 100, fireResistant: 200 },
@@ -52,9 +54,7 @@ export const EXTINGUISHER_AREA_PER_UNIT_M2: Record<
   school: { normal: 200, fireResistant: 400 },
 };
 
-export function getExtinguisherAreaPerUnit(
-  facilityType: Exclude<FacilityType, "apartment" | "villa">
-): ExtinguisherAreaPerUnit {
+export function getExtinguisherAreaPerUnit(facilityType: FacilityType): ExtinguisherAreaPerUnit {
   return EXTINGUISHER_AREA_PER_UNIT_M2[facilityType];
 }
 
