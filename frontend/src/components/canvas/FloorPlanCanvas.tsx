@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Circle, Group, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
+import { EntranceType } from "@/types/floorplan";
 import type {
-  EntranceType,
   ExtinguisherPlacement,
   HeatDetector,
   RoomType,
@@ -18,7 +18,8 @@ import type { HydrantPlacement } from "@/types/hydrant";
 import type { StructureRect } from "@/lib/structureFactory";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
 import { CANVAS_BACKGROUND_COLOR, CANVAS_WIDTH_PX, CANVAS_HEIGHT_PX } from "@/constants/canvas";
-import { metersToPixelLength } from "@/lib/area";
+import { metersToPixelLength, pixelLengthToMeters } from "@/lib/area";
+import { findEvacuationRoutes } from "@/lib/evacuationRoute";
 import { STRUCTURE_DEFAULTS, STRUCTURE_TYPE_ORDER } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS, ROOM_TYPE_ORDER } from "@/constants/roomTypes";
 import { ENTRANCE_TYPE_DEFAULTS, ENTRANCE_TYPE_ORDER } from "@/constants/entranceTypes";
@@ -43,6 +44,10 @@ const ZOOM_STEP = 1.15;
 // to a generic default size anchored at the click point (the specific type,
 // and so its real default size, isn't chosen until after the choice overlay).
 const MIN_DRAG_TO_DRAW = 6;
+
+// 피난동선: cycled through when 2+ exits are reachable, so each route/exit
+// marker is visually distinguishable.
+const EVACUATION_ROUTE_COLORS = ["#16a34a", "#0ea5e9", "#f59e0b", "#8b5cf6", "#ec4899"];
 
 // "구조물 추가"의 용도 선택지: 방 계열은 RoomType까지 곧바로 세분화해서 보여주고
 // (선택 즉시 room + 해당 roomType으로 생성), 복도/엘리베이터/계단은 구조물 종류
@@ -98,6 +103,19 @@ type FloorPlanCanvasProps = {
    * not configured yet — the gray site-boundary rect fills the whole canvas. */
   siteWidthM?: number;
   siteHeightM?: number;
+  /** True while 피난동선 표시 (evacuation route display) is toggled on —
+   * hovering a structure then draws its shortest route to the nearest
+   * 공동현관/비상구 (see lib/evacuationRoute.ts). */
+  evacuationRouteMode: boolean;
+  /** True when the current floor is 1F — 공동현관(COMMON) is the building's
+   * main entrance and physically only exists on the ground floor, so only 1F
+   * routes there; every other floor routes to 비상구(EMERGENCY) instead. */
+  isGroundFloor: boolean;
+  /** Floors between the current floor and 1F, and between the current floor
+   * and the rooftop — shown on 계단(stairs) structures' tooltip. See
+   * app/page.tsx for how these are derived from state.floors/groundMarkerIndex. */
+  floorsToGround: number;
+  floorsToRoof: number;
   selectedStructureId: string | null;
   recentlyCreatedStructureId: string | null;
   selectedPartitionId: string | null;
@@ -138,6 +156,10 @@ export default function FloorPlanCanvas({
   scale,
   siteWidthM,
   siteHeightM,
+  evacuationRouteMode,
+  isGroundFloor,
+  floorsToGround,
+  floorsToRoof,
   selectedStructureId,
   recentlyCreatedStructureId,
   selectedPartitionId,
@@ -189,6 +211,46 @@ export default function FloorPlanCanvas({
       nodesRef.current.delete(id);
     }
   }, []);
+
+  // 피난동선 표시: which structure the pointer is currently over. Only wired
+  // up (via renderStructure below) while evacuationRouteMode is on.
+  const [hoveredStructureId, setHoveredStructureId] = useState<string | null>(null);
+  const handleHoverStructure = useCallback((id: string) => {
+    setHoveredStructureId(id);
+  }, []);
+  // Guards against an out-of-order leave-after-enter (moving straight from
+  // structure A to overlapping structure B can fire B's enter before A's
+  // leave) clobbering the newer hover with null.
+  const handleUnhoverStructure = useCallback((id: string) => {
+    setHoveredStructureId((prev) => (prev === id ? null : prev));
+  }, []);
+  // 1F routes to 공동현관(COMMON) only — it's the building's main entrance
+  // and only physically exists on the ground floor; every other floor routes
+  // to 비상구(EMERGENCY) instead. See findEvacuationRoutes' allowedExitTypes.
+  const allowedExitTypes = useMemo(
+    () => [isGroundFloor ? EntranceType.COMMON : EntranceType.EMERGENCY],
+    [isGroundFloor]
+  );
+  // Every reachable exit's route, not just the nearest — when 2+ exits exist
+  // (e.g. two 비상구), all of them get drawn.
+  const evacuationRoutes = useMemo(
+    () =>
+      evacuationRouteMode && hoveredStructureId
+        ? findEvacuationRoutes(structures, hoveredStructureId, allowedExitTypes)
+        : [],
+    [evacuationRouteMode, hoveredStructureId, structures, allowedExitTypes]
+  );
+  // No route to any allowed exit exists from the hovered structure — shown
+  // as a warning marker instead of silently drawing nothing.
+  const showNoRouteWarning =
+    evacuationRouteMode && hoveredStructureId !== null && evacuationRoutes.length === 0;
+  const hoveredStructure = useMemo(
+    () =>
+      showNoRouteWarning
+        ? (structures.find((s) => s.id === hoveredStructureId) ?? null)
+        : null,
+    [showNoRouteWarning, structures, hoveredStructureId]
+  );
 
   // Zooms so the content under `point` (in stage/screen coordinates) stays
   // fixed on screen, instead of zooming toward the canvas origin.
@@ -427,6 +489,10 @@ export default function FloorPlanCanvas({
       onChange={onChange}
       registerNode={registerNode}
       interactionDisabled={!!pendingCategory}
+      onHoverStructure={evacuationRouteMode ? handleHoverStructure : undefined}
+      onUnhoverStructure={evacuationRouteMode ? handleUnhoverStructure : undefined}
+      floorsToGround={floorsToGround}
+      floorsToRoof={floorsToRoof}
     />
   );
 
@@ -644,6 +710,85 @@ export default function FloorPlanCanvas({
             dash={awaitingChoice ? undefined : [6, 4]}
             listening={false}
           />
+        )}
+        {evacuationRoutes.map((route, index) => {
+          if (route.points.length < 2) return null;
+          const routeColor = EVACUATION_ROUTE_COLORS[index % EVACUATION_ROUTE_COLORS.length];
+          const start = route.points[0];
+          const exit = route.points[route.points.length - 1];
+          return (
+            <Fragment key={route.exitStructureId}>
+              <Line
+                points={route.points.flatMap((p) => [p.x, p.y])}
+                stroke={routeColor}
+                strokeWidth={3}
+                dash={[10, 6]}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+              />
+              <Circle x={start.x} y={start.y} radius={6} fill={routeColor} listening={false} />
+              <Group x={exit.x} y={exit.y} listening={false}>
+                <Circle radius={9} fill={routeColor} stroke="#111827" strokeWidth={1} />
+                <Text
+                  text="출"
+                  width={18}
+                  height={18}
+                  offsetX={9}
+                  offsetY={9}
+                  align="center"
+                  verticalAlign="middle"
+                  fontSize={10}
+                  fill="#ffffff"
+                />
+              </Group>
+              <Group x={exit.x + 12} y={exit.y - 10} listening={false}>
+                <Rect width={64} height={20} fill="#111827" opacity={0.85} cornerRadius={4} />
+                <Text
+                  text={`${pixelLengthToMeters(route.totalDistancePx, scale).toFixed(1)}m`}
+                  width={64}
+                  height={20}
+                  align="center"
+                  verticalAlign="middle"
+                  fontSize={11}
+                  fill="#ffffff"
+                />
+              </Group>
+            </Fragment>
+          );
+        })}
+        {hoveredStructure && (
+          <Group
+            x={hoveredStructure.x + hoveredStructure.width / 2}
+            y={hoveredStructure.y + hoveredStructure.height / 2}
+            listening={false}
+          >
+            <Circle radius={12} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />
+            <Text
+              text="!"
+              width={24}
+              height={24}
+              offsetX={12}
+              offsetY={12}
+              align="center"
+              verticalAlign="middle"
+              fontSize={16}
+              fontStyle="bold"
+              fill="#ffffff"
+            />
+            <Group x={18} y={-10} listening={false}>
+              <Rect width={112} height={20} fill="#7f1d1d" opacity={0.9} cornerRadius={4} />
+              <Text
+                text="대피 경로 없음"
+                width={112}
+                height={20}
+                align="center"
+                verticalAlign="middle"
+                fontSize={11}
+                fill="#ffffff"
+              />
+            </Group>
+          </Group>
         )}
         <Transformer
           ref={transformerRef}

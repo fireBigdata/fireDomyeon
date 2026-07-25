@@ -11,6 +11,7 @@ import type { HydrantSummary } from "@/hooks/useHydrantPlacement";
 import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
 import FireResistanceToggle from "@/components/panels/FireResistanceToggle";
+import EvacuationRoutePanel from "@/components/panels/EvacuationRoutePanel";
 import BuildingScaleInput, {
   type BuildingScaleFields,
 } from "@/components/panels/BuildingScaleInput";
@@ -44,6 +45,8 @@ type LeftPanelProps = {
   smokeDetectorSummary: SmokeDetectorSummary | null;
   isFireResistantStructure: boolean;
   onFireResistantStructureChange: (value: boolean) => void;
+  evacuationRouteMode: boolean;
+  onToggleEvacuationRoute: () => void;
   buildingScale: BuildingScaleFields;
   onBuildingScaleChange: (patch: Partial<BuildingScaleFields>) => void;
   onAutoPlaceSprinklers: () => void;
@@ -77,6 +80,8 @@ export default function LeftPanel({
   smokeDetectorSummary,
   isFireResistantStructure,
   onFireResistantStructureChange,
+  evacuationRouteMode,
+  onToggleEvacuationRoute,
   buildingScale,
   onBuildingScaleChange,
   onAutoPlaceSprinklers,
@@ -95,6 +100,7 @@ export default function LeftPanel({
         isFireResistantStructure={isFireResistantStructure}
         onChange={onFireResistantStructureChange}
       />
+      <EvacuationRoutePanel isActive={evacuationRouteMode} onToggle={onToggleEvacuationRoute} />
       <BuildingScaleInput value={buildingScale} onChange={onBuildingScaleChange} />
       <AutoPlaceAllButton onAutoPlaceAll={onAutoPlaceAll} />
       <ExtinguisherPanel

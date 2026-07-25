@@ -30,6 +30,16 @@ type StructureShapeProps = {
   /** True while the canvas is in draw-a-new-structure mode, so existing
    * structures don't intercept the mousedown that starts the drag rectangle. */
   interactionDisabled?: boolean;
+  /** Only passed while 피난동선 표시 mode is on (see FloorPlanCanvas) — reports
+   * this structure as the hover target so a route to the nearest exit can be
+   * computed and drawn. */
+  onHoverStructure?: (id: string) => void;
+  onUnhoverStructure?: (id: string) => void;
+  /** Only meaningful when structure.type === "stairs" — floors between the
+   * current floor and 1F / the rooftop, shown in this stairs' tooltip. See
+   * app/page.tsx for how these are derived. */
+  floorsToGround: number;
+  floorsToRoof: number;
 };
 
 function StairsLines({ width, height }: { width: number; height: number }) {
@@ -66,6 +76,10 @@ export default function StructureShape({
   onChange,
   registerNode,
   interactionDisabled,
+  onHoverStructure,
+  onUnhoverStructure,
+  floorsToGround,
+  floorsToRoof,
 }: StructureShapeProps) {
   const contentRef = useRef<Konva.Group>(null);
 
@@ -109,6 +123,7 @@ export default function StructureShape({
     ? null
     : pixelAreaToSquareMeters(computeEffectivePixelArea(structure), scale);
 
+  const isStairs = structure.type === "stairs";
   const tooltipLines = [
     "구조물 정보",
     `종류: ${typeLabel}`,
@@ -116,6 +131,12 @@ export default function StructureShape({
     `가로: ${widthM.toFixed(1)}m`,
     `세로: ${heightM.toFixed(1)}m`,
   ];
+  // 계단은 대피 경로 판단에 바로 쓰이는 정보라, 선택 없이도 구조물 바로 아래에
+  // 항상 보이도록 별도 라벨로 표시한다 (아래 STAIRS_FLOOR_LABEL_HEIGHT 참고).
+  const stairsFloorLabel = isStairs
+    ? `1층까지 ${floorsToGround}개 층 · 옥상까지 ${floorsToRoof}개 층`
+    : null;
+  const STAIRS_FLOOR_LABEL_HEIGHT = 18;
   const TOOLTIP_WIDTH = 150;
   const TOOLTIP_LINE_HEIGHT = 11 * 1.5;
   const TOOLTIP_HEIGHT = tooltipLines.length * TOOLTIP_LINE_HEIGHT + 16;
@@ -135,6 +156,8 @@ export default function StructureShape({
       dragBoundFunc={handleDragBound}
       onClick={() => onSelect(structure.id)}
       onTap={() => onSelect(structure.id)}
+      onMouseEnter={() => onHoverStructure?.(structure.id)}
+      onMouseLeave={() => onUnhoverStructure?.(structure.id)}
       onDragEnd={(e) => {
         onChange(structure.id, { x: e.target.x(), y: e.target.y() });
       }}
@@ -197,6 +220,36 @@ export default function StructureShape({
           listening={false}
         />
       </Group>
+      {stairsFloorLabel && (
+        // Sits centered just below the stairs rectangle, outside contentRef
+        // (like the tooltip below) so it doesn't get folded into the
+        // Transformer's selection bounds — always visible, not gated by
+        // isSelected, since it's safety info someone should see at a glance,
+        // not only on click. Widened past the structure's own width (stairs
+        // default to a narrow 110px) so the text isn't cramped.
+        <Group
+          x={(structure.width - Math.max(structure.width, 140)) / 2}
+          y={structure.height + 4}
+          listening={false}
+        >
+          <Rect
+            width={Math.max(structure.width, 140)}
+            height={STAIRS_FLOOR_LABEL_HEIGHT}
+            fill="#111827"
+            opacity={0.85}
+            cornerRadius={3}
+          />
+          <Text
+            text={stairsFloorLabel}
+            width={Math.max(structure.width, 140)}
+            height={STAIRS_FLOOR_LABEL_HEIGHT}
+            align="center"
+            verticalAlign="middle"
+            fontSize={10}
+            fill="#ffffff"
+          />
+        </Group>
+      )}
       {showTooltip && (
         // Anchored below-right of the room's top-left corner (rather than
         // above), mirroring HeatDetectorShape's tooltip so an upward

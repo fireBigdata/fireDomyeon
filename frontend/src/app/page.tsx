@@ -70,6 +70,19 @@ export default function Home() {
 
   const [pendingCategory, setPendingCategory] = useState<StructureCategory | null>(null);
 
+  // 피난동선 표시 toggle: while true, hovering a structure on the canvas
+  // draws its shortest route to the nearest 공동현관/비상구 (see
+  // components/canvas/FloorPlanCanvas.tsx + lib/evacuationRoute.ts).
+  const [evacuationRouteMode, setEvacuationRouteMode] = useState(false);
+
+  // 계단(stairs) tooltip info: how many floors to 1F, and how many floors up
+  // to the rooftop (one above the highest ground floor). Both derived from
+  // the current floor's position in state.floors relative to groundMarkerIndex
+  // (the array index of "1F" — see lib/floorOrder.ts's applyAutoFloorNames).
+  const currentFloorIndex = state.floors.findIndex((f) => f.id === state.currentFloorId);
+  const floorsToGround = Math.abs(currentFloorIndex - state.groundMarkerIndex);
+  const floorsToRoof = state.floors.length - currentFloorIndex;
+
   // Shown once, right after the page finishes restoring any saved plan (so a
   // returning user with an already-configured site doesn't see it flash
   // open), until the user confirms (setSiteDimensions fills in siteWidthM)
@@ -248,6 +261,8 @@ export default function Home() {
           smokeDetectorSummary={smokeDetectorSummary}
           isFireResistantStructure={state.isFireResistantStructure ?? false}
           onFireResistantStructureChange={setIsFireResistantStructure}
+          evacuationRouteMode={evacuationRouteMode}
+          onToggleEvacuationRoute={() => setEvacuationRouteMode((prev) => !prev)}
           buildingScale={{
             buildingGroundFloorCount: state.buildingGroundFloorCount,
             buildingBasementFloorCount: state.buildingBasementFloorCount,
@@ -275,6 +290,10 @@ export default function Home() {
             scale={state.scale}
             siteWidthM={state.siteWidthM}
             siteHeightM={state.siteHeightM}
+            evacuationRouteMode={evacuationRouteMode}
+            isGroundFloor={currentFloor.name === "1F"}
+            floorsToGround={floorsToGround}
+            floorsToRoof={floorsToRoof}
             selectedStructureId={state.selectedStructureId}
             recentlyCreatedStructureId={state.recentlyCreatedStructureId}
             selectedPartitionId={state.selectedPartitionId}
