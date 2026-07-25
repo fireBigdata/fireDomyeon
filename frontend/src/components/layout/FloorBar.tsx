@@ -25,18 +25,27 @@ type FloorBarProps = {
 
 type DropGapProps = {
   index: number;
+  isDragging: boolean;
   isActive: boolean;
   onDragOver: (index: number) => void;
   onDrop: (index: number) => void;
 };
 
-/** Thin drop target rendered between/around tabs while a drag is in
- * progress — shows a dashed vertical line when it's the current drop target,
- * so it's clear a floor can be dropped between two floors or at either end,
- * not just directly onto another tab. */
-function DropGap({ index, isActive, onDragOver, onDrop }: DropGapProps) {
+/**
+ * Drop target rendered between/around every tab (and the 지상 marker) — kept
+ * permanently mounted (only its width/style react to `isDragging`/`isActive`)
+ * rather than being added/removed at drag start/end. Mounting a fresh drop
+ * target mid-drag is what made the second-and-later drag flaky: some
+ * browsers don't reliably recognize an element that only appears after a
+ * native drag is already in progress, which could leave the drag state
+ * machine stuck for the next attempt. Widens and shows a dashed line while
+ * dragging, so it's clear a floor can be dropped between two floors or at
+ * either end, not just directly onto another tab.
+ */
+function DropGap({ index, isDragging, isActive, onDragOver, onDrop }: DropGapProps) {
   return (
     <div
+      onDragEnter={(e) => e.preventDefault()}
       onDragOver={(e) => {
         e.preventDefault();
         onDragOver(index);
@@ -45,7 +54,9 @@ function DropGap({ index, isActive, onDragOver, onDrop }: DropGapProps) {
         e.preventDefault();
         onDrop(index);
       }}
-      className="flex h-7 w-3 shrink-0 items-center justify-center"
+      className={`flex h-7 shrink-0 items-center justify-center transition-[width] ${
+        isDragging ? "w-3" : "w-1.5"
+      }`}
     >
       <div
         className={`h-full w-0 border-l-2 ${
@@ -83,6 +94,11 @@ export default function FloorBar({
   const handleDragStart = (key: string) => (e: DragEvent) => {
     setDraggedKey(key);
     e.dataTransfer.effectAllowed = "move";
+    // Some browsers (notably Firefox) only commit to a drag operation, and
+    // reliably fire later dragover/drop events, once dataTransfer carries
+    // data — without this, drags can start looking fine but silently stop
+    // producing drop events after the first one or two.
+    e.dataTransfer.setData("text/plain", key);
   };
   const handleDragEnd = () => {
     setDraggedKey(null);
@@ -101,17 +117,16 @@ export default function FloorBar({
 
   return (
     <div className="flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-2">
-      <div className="flex flex-1 flex-wrap items-center gap-1.5">
+      <div className="flex flex-1 flex-wrap items-center">
         {order.map((key, index) => (
           <Fragment key={key}>
-            {isDragging && (
-              <DropGap
-                index={index}
-                isActive={dragOverGap === index}
-                onDragOver={setDragOverGap}
-                onDrop={handleDropAtGap}
-              />
-            )}
+            <DropGap
+              index={index}
+              isDragging={isDragging}
+              isActive={dragOverGap === index}
+              onDragOver={setDragOverGap}
+              onDrop={handleDropAtGap}
+            />
             {key === GROUND_MARKER_KEY ? (
               <div
                 draggable
@@ -162,14 +177,13 @@ export default function FloorBar({
             )}
           </Fragment>
         ))}
-        {isDragging && (
-          <DropGap
-            index={order.length}
-            isActive={dragOverGap === order.length}
-            onDragOver={setDragOverGap}
-            onDrop={handleDropAtGap}
-          />
-        )}
+        <DropGap
+          index={order.length}
+          isDragging={isDragging}
+          isActive={dragOverGap === order.length}
+          onDragOver={setDragOverGap}
+          onDrop={handleDropAtGap}
+        />
       </div>
       <button
         type="button"
