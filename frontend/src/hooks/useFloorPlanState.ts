@@ -214,17 +214,14 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setState((prev) => ({ ...prev, isFireResistantStructure }));
   }, []);
 
+  // buildingSiteAreaSqm is the only manually-adjustable building-scale field
+  // left here: buildingGroundFloorCount/buildingBasementFloorCount are set by
+  // the floor-reorder actions below (addFloor/removeFloor/moveFloorBarItem),
+  // and buildingAreaSqm/buildingTotalFloorAreaSqm are fully auto-applied from
+  // the drawn floor plan at the bottom of this hook (autoBuildingAreas) —
+  // neither is a plain patchable field anymore.
   const setBuildingScale = useCallback(
-    (patch: Partial<
-      Pick<
-        FloorPlanState,
-        | "buildingGroundFloorCount"
-        | "buildingBasementFloorCount"
-        | "buildingAreaSqm"
-        | "buildingTotalFloorAreaSqm"
-        | "buildingSiteAreaSqm"
-      >
-    >) => {
+    (patch: Partial<Pick<FloorPlanState, "buildingSiteAreaSqm">>) => {
       setState((prev) => ({ ...prev, ...patch }));
     },
     []
@@ -860,8 +857,42 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     [currentFloor.structures, state.scale]
   );
 
+  // 건축면적/연면적 for the AI equipment-count predictor (see
+  // BuildingScaleInput) — fully auto-applied from the drawn floor plan,
+  // exactly like buildingGroundFloorCount/buildingBasementFloorCount, so
+  // there's no separate "manual override" to keep in sync: this is computed
+  // fresh every render (not written back into the underlying useState via an
+  // effect) and merged into the returned `state` below, so it always
+  // reflects the LATEST structures/floors — adding/editing/removing a
+  // structure, or adding/removing a floor, updates it immediately with no
+  // extra wiring needed at any of those call sites. 건축면적 (building
+  // footprint) is approximated as the largest single floor's drawn area —
+  // this app has no separate footprint/setback data — and 연면적 (total
+  // floor area) is the sum across every floor.
+  const autoBuildingAreas = useMemo(() => {
+    const perFloorAreas = state.floors.map((floor) =>
+      pixelAreaToSquareMeters(computeTotalStructurePixelArea(floor.structures), state.scale)
+    );
+    const roundToOneDecimal = (value: number) => Math.round(value * 10) / 10;
+    return {
+      buildingAreaSqm: roundToOneDecimal(perFloorAreas.length > 0 ? Math.max(...perFloorAreas) : 0),
+      buildingTotalFloorAreaSqm: roundToOneDecimal(
+        perFloorAreas.reduce((sum, area) => sum + area, 0)
+      ),
+    };
+  }, [state.floors, state.scale]);
+
+  const stateWithAutoBuildingAreas = useMemo(
+    () => ({
+      ...state,
+      buildingAreaSqm: autoBuildingAreas.buildingAreaSqm,
+      buildingTotalFloorAreaSqm: autoBuildingAreas.buildingTotalFloorAreaSqm,
+    }),
+    [state, autoBuildingAreas]
+  );
+
   return {
-    state,
+    state: stateWithAutoBuildingAreas,
     hasHydrated,
     currentFloor,
     selectedStructure,

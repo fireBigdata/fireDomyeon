@@ -107,6 +107,9 @@ export default function Home() {
 
   // Lets the equipment-selection page (a separate route with no shared
   // state/Context) read this floor plan's latest floors/area/equipment data.
+  // state.buildingAreaSqm/buildingTotalFloorAreaSqm are already the live
+  // auto-calculated values (see useFloorPlanState), so this just mirrors
+  // `state` as-is.
   useEffect(() => {
     saveFloorPlanStateToStorage(state);
   }, [state]);
