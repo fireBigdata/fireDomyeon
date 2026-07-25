@@ -17,7 +17,8 @@ import type { SmokeDetector } from "@/types/smokeDetector";
 import type { HydrantPlacement } from "@/types/hydrant";
 import type { StructureRect } from "@/lib/structureFactory";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
-import { CANVAS_BACKGROUND_COLOR } from "@/constants/canvas";
+import { CANVAS_BACKGROUND_COLOR, CANVAS_WIDTH_PX, CANVAS_HEIGHT_PX } from "@/constants/canvas";
+import { metersToPixelLength } from "@/lib/area";
 import { STRUCTURE_DEFAULTS, STRUCTURE_TYPE_ORDER } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS, ROOM_TYPE_ORDER } from "@/constants/roomTypes";
 import { ENTRANCE_TYPE_DEFAULTS, ENTRANCE_TYPE_ORDER } from "@/constants/entranceTypes";
@@ -33,8 +34,8 @@ import SprinklerHeadShape from "./SprinklerHeadShape";
 import HydrantShape from "./HydrantShape";
 import StructureTypeChoiceOverlay from "./StructureTypeChoiceOverlay";
 
-const CANVAS_WIDTH = 900;
-const CANVAS_HEIGHT = 600;
+const CANVAS_WIDTH = CANVAS_WIDTH_PX;
+const CANVAS_HEIGHT = CANVAS_HEIGHT_PX;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 1.15;
@@ -93,6 +94,10 @@ function clampZoom(value: number): number {
 type FloorPlanCanvasProps = {
   structures: Structure[];
   scale: number;
+  /** Real-world site 가로/세로 (meters), from InitialSetupModal. Undefined =
+   * not configured yet — the gray site-boundary rect fills the whole canvas. */
+  siteWidthM?: number;
+  siteHeightM?: number;
   selectedStructureId: string | null;
   recentlyCreatedStructureId: string | null;
   selectedPartitionId: string | null;
@@ -131,6 +136,8 @@ type FloorPlanCanvasProps = {
 export default function FloorPlanCanvas({
   structures,
   scale,
+  siteWidthM,
+  siteHeightM,
   selectedStructureId,
   recentlyCreatedStructureId,
   selectedPartitionId,
@@ -456,6 +463,17 @@ export default function FloorPlanCanvas({
       )
     : 0;
 
+  // Gray site-boundary rect: sized to the real 가로/세로 (via `scale`, which
+  // InitialSetupModal derives so this always fits the canvas undistorted),
+  // centered in the fixed-size Stage. Falls back to filling the whole canvas
+  // when the site hasn't been configured yet.
+  const siteRectWidth =
+    siteWidthM !== undefined ? metersToPixelLength(siteWidthM, scale) : CANVAS_WIDTH;
+  const siteRectHeight =
+    siteHeightM !== undefined ? metersToPixelLength(siteHeightM, scale) : CANVAS_HEIGHT;
+  const siteRectX = (CANVAS_WIDTH - siteRectWidth) / 2;
+  const siteRectY = (CANVAS_HEIGHT - siteRectHeight) / 2;
+
   return (
     <div className="relative">
       <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-md border border-gray-300 bg-white p-1 shadow-sm">
@@ -525,9 +543,13 @@ export default function FloorPlanCanvas({
       >
         <Layer>
           <Rect
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
+            x={siteRectX}
+            y={siteRectY}
+            width={siteRectWidth}
+            height={siteRectHeight}
             fill={CANVAS_BACKGROUND_COLOR}
+            stroke="#9ca3af"
+            strokeWidth={1}
             listening={false}
           />
           {regularStructures.map(renderStructure)}

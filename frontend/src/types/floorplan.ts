@@ -141,6 +141,14 @@ export type FloorPlanState = {
   buildingAreaSqm?: number;
   buildingTotalFloorAreaSqm?: number;
   buildingSiteAreaSqm?: number;
+  /**
+   * Raw 가로/세로 (width/height, meters) entered in the initial setup form.
+   * Drives buildingSiteAreaSqm and `scale` (see setSiteDimensions in
+   * useFloorPlanState). Undefined = not yet configured — the setup form is
+   * shown on load.
+   */
+  siteWidthM?: number;
+  siteHeightM?: number;
   floors: Floor[];
   currentFloorId: string;
   selectedStructureId: string | null;

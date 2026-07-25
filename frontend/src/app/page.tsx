@@ -16,6 +16,7 @@ import FloorBar from "@/components/layout/FloorBar";
 import LeftPanel from "@/components/layout/LeftPanel";
 import RightPanel from "@/components/layout/RightPanel";
 import AreaSummary from "@/components/panels/AreaSummary";
+import InitialSetupModal from "@/components/panels/InitialSetupModal";
 import DynamicFloorPlanCanvas from "@/components/canvas/DynamicFloorPlanCanvas";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
 import type { EntranceType, RoomType, StructureType } from "@/types/floorplan";
@@ -24,6 +25,7 @@ import type { StructureRect } from "@/lib/structureFactory";
 export default function Home() {
   const {
     state,
+    hasHydrated,
     currentFloor,
     selectedStructure,
     totalArea,
@@ -31,6 +33,7 @@ export default function Home() {
     setFacilityType,
     setIsFireResistantStructure,
     setBuildingScale,
+    setSiteDimensions,
     addStructure,
     updateStructure,
     removeStructure,
@@ -66,6 +69,14 @@ export default function Home() {
   } = useFloorPlanState();
 
   const [pendingCategory, setPendingCategory] = useState<StructureCategory | null>(null);
+
+  // Shown once, right after the page finishes restoring any saved plan (so a
+  // returning user with an already-configured site doesn't see it flash
+  // open), until the user confirms (setSiteDimensions fills in siteWidthM)
+  // or explicitly skips it.
+  const [setupDismissed, setSetupDismissed] = useState(false);
+  const showSetupModal =
+    hasHydrated && state.siteWidthM === undefined && !setupDismissed;
 
   const handleArmStructure = (category: StructureCategory) => {
     setPendingCategory((prev) => (prev === category ? null : category));
@@ -180,6 +191,17 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-gray-50">
+      {showSetupModal && (
+        <InitialSetupModal
+          facilityType={state.facilityType}
+          onFacilityTypeChange={setFacilityType}
+          onConfirm={(siteWidthM, siteHeightM) => {
+            setSiteDimensions(siteWidthM, siteHeightM);
+          }}
+          onSkip={() => setSetupDismissed(true)}
+        />
+      )}
+
       <TopBar
         name={state.name}
         onNameChange={setName}
@@ -247,6 +269,8 @@ export default function Home() {
           <DynamicFloorPlanCanvas
             structures={currentFloor.structures}
             scale={state.scale}
+            siteWidthM={state.siteWidthM}
+            siteHeightM={state.siteHeightM}
             selectedStructureId={state.selectedStructureId}
             recentlyCreatedStructureId={state.recentlyCreatedStructureId}
             selectedPartitionId={state.selectedPartitionId}

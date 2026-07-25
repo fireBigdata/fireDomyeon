@@ -23,7 +23,7 @@ import type { HydrantPlacement } from "@/types/hydrant";
 import { createStructure } from "@/lib/structureFactory";
 import type { StructureRect } from "@/lib/structureFactory";
 import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
-import { pixelAreaToSquareMeters } from "@/lib/area";
+import { computeScaleForSiteDimensions, pixelAreaToSquareMeters } from "@/lib/area";
 import { computeTotalStructurePixelArea } from "@/lib/structureArea";
 import { getFloorPlanStateSnapshot } from "@/lib/floorPlanStorage";
 import {
@@ -129,20 +129,30 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     initial ?? createFreshState
   );
 
+  // False until the mount-time restore below has run (or been skipped for an
+  // explicit `initial`). InitialSetupModal waits on this so it doesn't
+  // flash open for a returning user whose plan hasn't loaded from
+  // localStorage yet.
+  const [hasHydrated, setHasHydrated] = useState(false);
+
   // The initial render (and SSR) always starts from a fresh, empty plan so
   // server and client markup match. Once mounted in the browser, restore the
   // floor plan last drawn on this page — the page component unmounts when
   // navigating to another route (e.g. /equipment-selection) and remounts on
   // the way back, so in-memory state alone doesn't survive the trip.
   useEffect(() => {
-    if (initial) return;
+    if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHasHydrated(true);
+      return;
+    }
     const restored = parseStoredState(getFloorPlanStateSnapshot());
     if (restored) {
       // One-time sync from the localStorage snapshot (an external system),
       // not a derived-state cascade.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(restored);
     }
+    setHasHydrated(true);
     // Only ever run on mount: restoring later would clobber in-progress edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -193,6 +203,19 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     },
     []
   );
+
+  // Called from InitialSetupModal: derives 대지면적 (buildingSiteAreaSqm) and
+  // the drawing's `scale` from the site's real-world width/height, so the
+  // canvas's fixed pixel size maps onto the entered site area.
+  const setSiteDimensions = useCallback((siteWidthM: number, siteHeightM: number) => {
+    setState((prev) => ({
+      ...prev,
+      siteWidthM,
+      siteHeightM,
+      buildingSiteAreaSqm: siteWidthM * siteHeightM,
+      scale: computeScaleForSiteDimensions(siteWidthM, siteHeightM),
+    }));
+  }, []);
 
   const addStructure = useCallback(
     (
@@ -767,6 +790,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
 
   return {
     state,
+    hasHydrated,
     currentFloor,
     selectedStructure,
     totalArea,
@@ -774,6 +798,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setFacilityType,
     setIsFireResistantStructure,
     setBuildingScale,
+    setSiteDimensions,
     addStructure,
     updateStructure,
     removeStructure,
