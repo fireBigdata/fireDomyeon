@@ -1,27 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import type { DragEvent } from "react";
 import type { Floor } from "@/types/floorplan";
+import { GROUND_MARKER_KEY, buildFloorBarOrder } from "@/lib/floorOrder";
 
 type FloorBarProps = {
   floors: Floor[];
+  /** See FloorPlanState.groundMarkerIndex — drives both the 지상 marker's
+   * position in the bar and every floor's auto-computed name. */
+  groundMarkerIndex: number;
   currentFloorId: string;
   onSelect: (floorId: string) => void;
   onAdd: () => void;
   onClone: () => void;
   onRemove: (floorId: string) => void;
-  onRename: (floorId: string, name: string) => void;
+  /** Drag-and-drop reorder: draggedKey is a floor id or GROUND_MARKER_KEY;
+   * gapIndex is which dashed drop-line (rendered between/around tabs) the
+   * user released over — dragging a floor across the marker, or dragging the
+   * marker itself, both go through this one callback. */
+  onMoveItem: (draggedKey: string, gapIndex: number) => void;
   onResetFloor: () => void;
 };
 
+type DropGapProps = {
+  index: number;
+  isActive: boolean;
+  onDragOver: (index: number) => void;
+  onDrop: (index: number) => void;
+};
+
+/** Thin drop target rendered between/around tabs while a drag is in
+ * progress — shows a dashed vertical line when it's the current drop target,
+ * so it's clear a floor can be dropped between two floors or at either end,
+ * not just directly onto another tab. */
+function DropGap({ index, isActive, onDragOver, onDrop }: DropGapProps) {
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver(index);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop(index);
+      }}
+      className="flex h-7 w-3 shrink-0 items-center justify-center"
+    >
+      <div
+        className={`h-full w-0 border-l-2 ${
+          isActive ? "border-dashed border-blue-500" : "border-transparent"
+        }`}
+      />
+    </div>
+  );
+}
+
 export default function FloorBar({
   floors,
+  groundMarkerIndex,
   currentFloorId,
   onSelect,
   onAdd,
   onClone,
   onRemove,
-  onRename,
+  onMoveItem,
   onResetFloor,
 }: FloorBarProps) {
   const currentFloorName =
@@ -32,69 +75,101 @@ export default function FloorBar({
       onResetFloor();
     }
   };
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draftName, setDraftName] = useState("");
 
-  const startEditing = (floor: Floor) => {
-    setEditingId(floor.id);
-    setDraftName(floor.name);
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dragOverGap, setDragOverGap] = useState<number | null>(null);
+  const isDragging = draggedKey !== null;
+
+  const handleDragStart = (key: string) => (e: DragEvent) => {
+    setDraggedKey(key);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragEnd = () => {
+    setDraggedKey(null);
+    setDragOverGap(null);
+  };
+  const handleDropAtGap = (gapIndex: number) => {
+    if (draggedKey) onMoveItem(draggedKey, gapIndex);
+    setDraggedKey(null);
+    setDragOverGap(null);
   };
 
-  const commitEditing = () => {
-    if (editingId && draftName.trim()) {
-      onRename(editingId, draftName.trim());
-    }
-    setEditingId(null);
-  };
+  const order = buildFloorBarOrder(floors, groundMarkerIndex);
+  const floorsById = new Map(floors.map((f) => [f.id, f] as const));
+  const groundFloorCount = floors.length - groundMarkerIndex;
+  const basementFloorCount = groundMarkerIndex;
 
   return (
     <div className="flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-2">
-      <div className="flex flex-1 flex-wrap gap-1.5">
-        {floors.map((floor) => {
-          const isActive = floor.id === currentFloorId;
-          return (
-            <div
-              key={floor.id}
-              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${
-                isActive
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {editingId === floor.id ? (
-                <input
-                  autoFocus
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                  onBlur={commitEditing}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitEditing();
-                    if (e.key === "Escape") setEditingId(null);
-                  }}
-                  className="w-16 rounded border border-gray-300 px-1 text-sm"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onSelect(floor.id)}
-                  onDoubleClick={() => startEditing(floor)}
-                >
-                  {floor.name}
-                </button>
-              )}
-              {floors.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => onRemove(floor.id)}
-                  className="text-xs text-gray-400 hover:text-red-500"
-                  aria-label={`${floor.name} 삭제`}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          );
-        })}
+      <div className="flex flex-1 flex-wrap items-center gap-1.5">
+        {order.map((key, index) => (
+          <Fragment key={key}>
+            {isDragging && (
+              <DropGap
+                index={index}
+                isActive={dragOverGap === index}
+                onDragOver={setDragOverGap}
+                onDrop={handleDropAtGap}
+              />
+            )}
+            {key === GROUND_MARKER_KEY ? (
+              <div
+                draggable
+                onDragStart={handleDragStart(key)}
+                onDragEnd={handleDragEnd}
+                title="드래그해서 지상/지하 경계를 옮길 수 있어요"
+                className={`flex cursor-grab flex-col items-center rounded-md border border-dashed border-gray-300 bg-gray-50 px-2 py-1 leading-none active:cursor-grabbing ${
+                  draggedKey === key ? "opacity-50" : ""
+                }`}
+              >
+                <span className="text-xs font-medium text-gray-500">지상</span>
+                <span className="mt-0.5 text-[10px] text-gray-400">
+                  지상{groundFloorCount}·지하{basementFloorCount}
+                </span>
+              </div>
+            ) : (
+              (() => {
+                const floor = floorsById.get(key);
+                if (!floor) return null;
+                const isActive = floor.id === currentFloorId;
+                return (
+                  <div
+                    draggable
+                    onDragStart={handleDragStart(floor.id)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex cursor-grab items-center gap-1 rounded-md border px-2 py-1 text-sm active:cursor-grabbing ${
+                      isActive
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                    } ${draggedKey === floor.id ? "opacity-50" : ""}`}
+                  >
+                    <button type="button" onClick={() => onSelect(floor.id)}>
+                      {floor.name}
+                    </button>
+                    {floors.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(floor.id)}
+                        className="text-xs text-gray-400 hover:text-red-500"
+                        aria-label={`${floor.name} 삭제`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })()
+            )}
+          </Fragment>
+        ))}
+        {isDragging && (
+          <DropGap
+            index={order.length}
+            isActive={dragOverGap === order.length}
+            onDragOver={setDragOverGap}
+            onDrop={handleDropAtGap}
+          />
+        )}
       </div>
       <button
         type="button"

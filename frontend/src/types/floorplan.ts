@@ -150,6 +150,14 @@ export type FloorPlanState = {
   siteWidthM?: number;
   siteHeightM?: number;
   floors: Floor[];
+  /**
+   * Number of floors, counted from the start of `floors`, that sit left of
+   * the "지상" (ground-level) marker in FloorBar — i.e. basement floors.
+   * Floor names (B1/B2.../1F/2F...) and buildingGroundFloorCount/
+   * buildingBasementFloorCount are all derived from this + floors.length.
+   * See lib/floorOrder.ts.
+   */
+  groundMarkerIndex: number;
   currentFloorId: string;
   selectedStructureId: string | null;
   /** Set right after a structure is added so its tooltip stays hidden until the user re-selects it. */

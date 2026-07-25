@@ -22,10 +22,18 @@ import type { SmokeDetector, SmokeDetectorCategory } from "@/types/smokeDetector
 import type { HydrantPlacement } from "@/types/hydrant";
 import { createStructure } from "@/lib/structureFactory";
 import type { StructureRect } from "@/lib/structureFactory";
-import { createFloor, cloneFloor, nextFloorName } from "@/lib/floorFactory";
+import { createFloor, cloneFloor } from "@/lib/floorFactory";
 import { computeScaleForSiteDimensions, pixelAreaToSquareMeters } from "@/lib/area";
 import { computeTotalStructurePixelArea } from "@/lib/structureArea";
 import { getFloorPlanStateSnapshot } from "@/lib/floorPlanStorage";
+import {
+  applyAutoFloorNames,
+  applyFloorBarOrder,
+  buildFloorBarOrder,
+  countBasementFloors,
+  countGroundFloors,
+  moveArrayItemToGap,
+} from "@/lib/floorOrder";
 import {
   ROOT_LEAF_ID,
   deleteRegionAt,
@@ -37,10 +45,14 @@ import {
 
 function createFreshState(): FloorPlanState {
   const floor = createFloor("1F");
+  const groundMarkerIndex = 0;
   return {
     name: "새 도면",
     facilityType: "apartment",
     floors: [floor],
+    groundMarkerIndex,
+    buildingGroundFloorCount: countGroundFloors([floor], groundMarkerIndex),
+    buildingBasementFloorCount: countBasementFloors(groundMarkerIndex),
     currentFloorId: floor.id,
     selectedStructureId: null,
     recentlyCreatedStructureId: null,
@@ -112,11 +124,25 @@ function parseStoredState(stored: string | null): FloorPlanState | null {
     const currentFloorId = floors.some((f) => f.id === parsed.currentFloorId)
       ? (parsed.currentFloorId as string)
       : floors[0].id;
+    // Older snapshots (saved before the 지상 marker existed) have no
+    // groundMarkerIndex: default to 0 so every floor lands on the ground
+    // side, keeping today's 1F/2F/... numbering unchanged for them.
+    const groundMarkerIndex = Math.min(
+      Math.max(
+        Number.isInteger(parsed.groundMarkerIndex) ? (parsed.groundMarkerIndex as number) : 0,
+        0
+      ),
+      floors.length
+    );
+    const normalizedFloors = applyAutoFloorNames(floors, groundMarkerIndex);
     return {
       ...createFreshState(),
       ...parsed,
-      floors,
+      floors: normalizedFloors,
       currentFloorId,
+      groundMarkerIndex,
+      buildingGroundFloorCount: countGroundFloors(normalizedFloors, groundMarkerIndex),
+      buildingBasementFloorCount: countBasementFloors(groundMarkerIndex),
     };
   } catch {
     // Corrupt or old-shape snapshot: ignore.
@@ -531,11 +557,16 @@ export function useFloorPlanState(initial?: FloorPlanState) {
 
   const addFloor = useCallback(() => {
     setState((prev) => {
-      const floor = createFloor(nextFloorName(prev.floors));
+      // Placeholder name: applyAutoFloorNames immediately overwrites it based
+      // on the new floor's position (appended to the ground side, at the end).
+      const floor = createFloor("");
+      const floors = applyAutoFloorNames([...prev.floors, floor], prev.groundMarkerIndex);
       return {
         ...prev,
-        floors: [...prev.floors, floor],
+        floors,
         currentFloorId: floor.id,
+        buildingGroundFloorCount: countGroundFloors(floors, prev.groundMarkerIndex),
+        buildingBasementFloorCount: countBasementFloors(prev.groundMarkerIndex),
         selectedStructureId: null,
         recentlyCreatedStructureId: null,
         selectedPartitionId: null,
@@ -552,11 +583,14 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setState((prev) => {
       const source = prev.floors.find((f) => f.id === prev.currentFloorId);
       if (!source) return prev;
-      const cloned = cloneFloor(source, nextFloorName(prev.floors));
+      const cloned = cloneFloor(source, "");
+      const floors = applyAutoFloorNames([...prev.floors, cloned], prev.groundMarkerIndex);
       return {
         ...prev,
-        floors: [...prev.floors, cloned],
+        floors,
         currentFloorId: cloned.id,
+        buildingGroundFloorCount: countGroundFloors(floors, prev.groundMarkerIndex),
+        buildingBasementFloorCount: countBasementFloors(prev.groundMarkerIndex),
         selectedStructureId: null,
         recentlyCreatedStructureId: null,
         selectedPartitionId: null,
@@ -572,13 +606,29 @@ export function useFloorPlanState(initial?: FloorPlanState) {
   const removeFloor = useCallback((floorId: string) => {
     setState((prev) => {
       if (prev.floors.length <= 1) return prev;
-      const floors = prev.floors.filter((f) => f.id !== floorId);
+      const removedIndex = prev.floors.findIndex((f) => f.id === floorId);
+      if (removedIndex === -1) return prev;
+      // A removed basement-side floor shifts every later index left by one,
+      // so the marker's own split count has to shrink with it to keep
+      // pointing at the same boundary; a removed ground-side floor doesn't
+      // affect the count of floors before the marker.
+      const groundMarkerIndex =
+        removedIndex < prev.groundMarkerIndex
+          ? prev.groundMarkerIndex - 1
+          : prev.groundMarkerIndex;
+      const floors = applyAutoFloorNames(
+        prev.floors.filter((f) => f.id !== floorId),
+        groundMarkerIndex
+      );
       const currentFloorId =
         prev.currentFloorId === floorId ? floors[0].id : prev.currentFloorId;
       return {
         ...prev,
         floors,
+        groundMarkerIndex,
         currentFloorId,
+        buildingGroundFloorCount: countGroundFloors(floors, groundMarkerIndex),
+        buildingBasementFloorCount: countBasementFloors(groundMarkerIndex),
         selectedStructureId: null,
         recentlyCreatedStructureId: null,
         selectedPartitionId: null,
@@ -591,11 +641,33 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     });
   }, []);
 
-  const renameFloor = useCallback((floorId: string, name: string) => {
-    setState((prev) => ({
-      ...prev,
-      floors: prev.floors.map((f) => (f.id === floorId ? { ...f, name } : f)),
-    }));
+  // Drag-and-drop reorder in FloorBar: draggedKey is a floor id or
+  // GROUND_MARKER_KEY (lib/floorOrder.ts); `gapIndex` is the dashed drop-line
+  // position the user released over — a slot BETWEEN two tabs (or off either
+  // end), not another tab itself, so every position is directly reachable.
+  // Floors and the 지상 marker reorder within one combined sequence, so
+  // moving a floor across the marker (or dragging the marker itself) always
+  // keeps floor numbering and buildingGroundFloorCount/buildingBasementFloorCount
+  // in sync with the new positions.
+  const moveFloorBarItem = useCallback((draggedKey: string, gapIndex: number) => {
+    setState((prev) => {
+      const order = buildFloorBarOrder(prev.floors, prev.groundMarkerIndex);
+      const fromIndex = order.indexOf(draggedKey);
+      if (fromIndex === -1) return prev;
+      const nextOrder = moveArrayItemToGap(order, fromIndex, gapIndex);
+      const { floors: reordered, groundMarkerIndex } = applyFloorBarOrder(
+        nextOrder,
+        prev.floors
+      );
+      const floors = applyAutoFloorNames(reordered, groundMarkerIndex);
+      return {
+        ...prev,
+        floors,
+        groundMarkerIndex,
+        buildingGroundFloorCount: countGroundFloors(floors, groundMarkerIndex),
+        buildingBasementFloorCount: countBasementFloors(groundMarkerIndex),
+      };
+    });
   }, []);
 
   // Clears everything drawn on the current floor (structures, detectors,
@@ -816,7 +888,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     addFloor,
     cloneCurrentFloor,
     removeFloor,
-    renameFloor,
+    moveFloorBarItem,
     resetCurrentFloor,
     resetAll,
     selectFloor,

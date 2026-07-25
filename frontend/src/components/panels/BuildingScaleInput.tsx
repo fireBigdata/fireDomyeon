@@ -17,8 +17,6 @@ type BuildingScaleInputProps = {
 };
 
 const FIELDS: { key: keyof BuildingScaleFields; label: string; unit: string }[] = [
-  { key: "buildingGroundFloorCount", label: "지상층수", unit: "층" },
-  { key: "buildingBasementFloorCount", label: "지하층수", unit: "층" },
   { key: "buildingAreaSqm", label: "건축면적", unit: "㎡" },
   { key: "buildingTotalFloorAreaSqm", label: "연면적", unit: "㎡" },
   { key: "buildingSiteAreaSqm", label: "대지면적", unit: "㎡" },
@@ -26,11 +24,20 @@ const FIELDS: { key: keyof BuildingScaleFields; label: string; unit: string }[] 
 
 /** Building-scale inputs used only to estimate 예비펌프/주펌프/충압펌프/
  * 급기팬/배기팬/자동폐쇄장치/발신기 counts via lib/api.ts predictEquipmentCounts
- * — this app has no drawing-based placement logic for those 7 types. */
+ * — this app has no drawing-based placement logic for those 7 types.
+ * 지상층수/지하층수 are auto-derived from FloorBar's 지상 marker (see
+ * lib/floorOrder.ts) rather than typed here — shown read-only for context. */
 export default function BuildingScaleInput({ value, onChange }: BuildingScaleInputProps) {
   return (
     <div className="flex flex-col gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
       <span className="text-gray-600">건물 규모 (AI 설비 개수 추정용)</span>
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
+        <span>지상/지하 층수 (FloorBar에서 자동 계산)</span>
+        <span className="text-gray-700">
+          지상 {value.buildingGroundFloorCount ?? 0}층 · 지하{" "}
+          {value.buildingBasementFloorCount ?? 0}층
+        </span>
+      </div>
       {FIELDS.map(({ key, label, unit }) => (
         <label key={key} className="flex items-center justify-between gap-2 text-xs text-gray-500">
           {label}

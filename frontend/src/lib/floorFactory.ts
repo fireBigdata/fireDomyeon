@@ -38,7 +38,3 @@ export function cloneFloor(floor: Floor, name: string): Floor {
     hydrantPlacements: [],
   };
 }
-
-export function nextFloorName(floors: Floor[]): string {
-  return `${floors.length + 1}F`;
-}

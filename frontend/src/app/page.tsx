@@ -51,7 +51,7 @@ export default function Home() {
     addFloor,
     cloneCurrentFloor,
     removeFloor,
-    renameFloor,
+    moveFloorBarItem,
     resetCurrentFloor,
     resetAll,
     selectFloor,
@@ -212,12 +212,13 @@ export default function Home() {
 
       <FloorBar
         floors={state.floors}
+        groundMarkerIndex={state.groundMarkerIndex}
         currentFloorId={state.currentFloorId}
         onSelect={selectFloor}
         onAdd={addFloor}
         onClone={cloneCurrentFloor}
         onRemove={removeFloor}
-        onRename={renameFloor}
+        onMoveItem={moveFloorBarItem}
         onResetFloor={handleResetCurrentFloor}
       />
 
