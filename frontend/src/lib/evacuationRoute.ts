@@ -27,6 +27,12 @@ export type StructureAnchor = {
    * undivided (or fully-deleted) structure's whole-bounding-box anchor. */
   leafId: string | null;
   point: Point;
+  /** This anchor's floor space in absolute (structure-offset) coordinates —
+   * the occupied partition's box, or the whole structure's box when
+   * undivided/fully-deleted. Used to test whether two of a structure's own
+   * anchors are physically adjacent (see findEvacuationRoutes), not exposed
+   * as routing info on its own. */
+  box: Box;
 };
 
 /**
@@ -42,21 +48,28 @@ export type StructureAnchor = {
  * case where every partition has been deleted.
  */
 function structureRouteAnchorEntries(structure: Structure): StructureAnchor[] {
-  if (!structure.partitions) return [{ leafId: null, point: center(structure) }];
+  const wholeBox: Box = { x: structure.x, y: structure.y, width: structure.width, height: structure.height };
+  if (!structure.partitions) return [{ leafId: null, point: center(structure), box: wholeBox }];
 
   const roomBox: Box = { x: 0, y: 0, width: structure.width, height: structure.height };
   const occupiedLeaves = computeLeafBoxes(structure.partitions, roomBox).filter(
     (leaf) => leaf.kind !== "empty"
   );
-  if (occupiedLeaves.length === 0) return [{ leafId: null, point: center(structure) }];
+  if (occupiedLeaves.length === 0) return [{ leafId: null, point: center(structure), box: wholeBox }];
 
-  return occupiedLeaves.map((leaf) => ({
-    leafId: leaf.id,
-    point: {
-      x: structure.x + leaf.box.x + leaf.box.width / 2,
-      y: structure.y + leaf.box.y + leaf.box.height / 2,
-    },
-  }));
+  return occupiedLeaves.map((leaf) => {
+    const box: Box = {
+      x: structure.x + leaf.box.x,
+      y: structure.y + leaf.box.y,
+      width: leaf.box.width,
+      height: leaf.box.height,
+    };
+    return {
+      leafId: leaf.id,
+      point: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+      box,
+    };
+  });
 }
 
 export function structureRouteAnchors(structure: Structure): Point[] {
@@ -104,6 +117,7 @@ type AnchorNode = {
   structureId: string;
   leafId: string | null;
   point: Point;
+  box: Box;
 };
 
 /**
@@ -119,13 +133,15 @@ type AnchorNode = {
  * Model: a graph whose nodes are routing ANCHORS (see structureRouteAnchors)
  * rather than whole structures — a partitioned room contributes one node per
  * occupied partition. Two anchors are only connected either (a) through an
- * "entrance" structure (a door, 공동현관, or 비상구) adjacent to both
- * anchors' structures, matching how doors actually work — rooms/corridors
- * never connect directly to each other just because their rectangles happen
- * to touch, you always have to go through an opening — or (b) by belonging
- * to the same structure, in which case every pair of that structure's
- * anchors is connected directly, so a partitioned room's separate occupied
- * partitions still act as one continuous walkable space. Dijkstra's
+ * "entrance" structure (a door, 공동현관, or 비상구) physically adjacent to
+ * BOTH anchors themselves (not just their structures' bounding boxes) —
+ * matching how doors actually work, rooms/corridors never connect directly
+ * to each other just because their rectangles happen to touch, you always
+ * have to go through an opening, and only the specific partition next to the
+ * door reaches it directly — or (b) by belonging to the same structure AND
+ * being physically adjacent partitions (sharing an edge), so the route can
+ * step into a neighboring partition directly but can't skip past one it
+ * isn't touching to reach a door on the far side. Dijkstra's
  * algorithm (uniform-cost shortest-path search — the same technique behind
  * turn-by-turn navigation and most game/robot pathfinding "AI") runs from
  * the anchor of the start structure matching `startHoveredLeafId` — the
@@ -160,6 +176,7 @@ export function findEvacuationRoutes(
         structureId: structure.id,
         leafId: entry.leafId,
         point: entry.point,
+        box: entry.box,
       }))
     );
   }
@@ -175,28 +192,36 @@ export function findEvacuationRoutes(
     adjacency.get(bId)!.push({ id: aId, weight });
   };
 
-  // A structure's own anchors are fully connected to each other, so its
-  // occupied partitions act as one continuous space rather than isolated points.
+  // A structure's own anchors connect to each other only where their
+  // partitions are physically adjacent (share an edge) — stepping into a
+  // neighboring partition is fine, but the route can't "teleport" past one
+  // it isn't touching straight to the exit; a partition with no occupied
+  // neighbor (isolated by empty regions on every side) reaches the rest of
+  // the structure only via a shared entrance, same as any other structure.
   for (const anchors of anchorsByStructure.values()) {
     for (let i = 0; i < anchors.length; i++) {
       for (let j = i + 1; j < anchors.length; j++) {
+        if (!rectsAdjacent(anchors[i].box, anchors[j].box)) continue;
         addEdge(anchors[i].id, anchors[j].id, distance(anchors[i].point, anchors[j].point));
       }
     }
   }
 
-  // Adjacency through entrance structures. Still checked at the STRUCTURE
-  // level (full bounding boxes) — partitions are visual subdivisions inside
-  // one continuous room, not separate rooms with their own doors — but every
-  // anchor of the entrance connects to every anchor of the adjacent structure.
+  // Adjacency through entrance structures — checked per ANCHOR box, not the
+  // whole room's bounding box: only the specific occupied partition(s)
+  // actually touching the entrance connect to it directly. A partition on
+  // the far side of the room has to reach that door-adjacent partition
+  // through the same-structure adjacency edges above first, so a route
+  // crossing a partitioned room shows every partition-to-partition hop it
+  // actually takes, the same as it would show hops between structures.
   for (const entrance of entrances) {
     const entranceAnchors = anchorsByStructure.get(entrance.id) ?? [];
     for (const other of walkable) {
       if (other.id === entrance.id || other.type === "entrance") continue;
-      if (!rectsAdjacent(entrance, other)) continue;
       const otherAnchors = anchorsByStructure.get(other.id) ?? [];
       for (const a of entranceAnchors) {
         for (const b of otherAnchors) {
+          if (!rectsAdjacent(a.box, b.box)) continue;
           addEdge(a.id, b.id, distance(a.point, b.point));
         }
       }
