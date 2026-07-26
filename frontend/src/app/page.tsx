@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
@@ -19,7 +19,7 @@ import AreaSummary from "@/components/panels/AreaSummary";
 import InitialSetupModal from "@/components/panels/InitialSetupModal";
 import DynamicFloorPlanCanvas from "@/components/canvas/DynamicFloorPlanCanvas";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
-import type { EntranceType, RoomType, StructureType } from "@/types/floorplan";
+import type { EntranceSwingDirection, EntranceType, RoomType, StructureType } from "@/types/floorplan";
 import type { StructureRect } from "@/lib/structureFactory";
 
 export default function Home() {
@@ -40,6 +40,7 @@ export default function Home() {
     setRoomType,
     setSprinklerHazard,
     setEntranceType,
+    setEntranceSwingDirection,
     selectStructure,
     selectPartition,
     splitPartition,
@@ -91,18 +92,22 @@ export default function Home() {
   const showSetupModal =
     hasHydrated && state.siteWidthM === undefined && !setupDismissed;
 
-  const handleArmStructure = (category: StructureCategory) => {
-    setPendingCategory((prev) => (prev === category ? null : category));
-    selectStructure(null);
-  };
+  const handleArmStructure = useCallback(
+    (category: StructureCategory) => {
+      setPendingCategory((prev) => (prev === category ? null : category));
+      selectStructure(null);
+    },
+    [selectStructure]
+  );
 
   const handleConfirmStructure = (
     rect: StructureRect,
     type: StructureType,
     roomType?: RoomType,
-    entranceType?: EntranceType
+    entranceType?: EntranceType,
+    entranceSwingDirection?: EntranceSwingDirection
   ) => {
-    addStructure(type, rect, roomType, entranceType);
+    addStructure(type, rect, roomType, entranceType, entranceSwingDirection);
     setPendingCategory(null);
   };
 
@@ -365,6 +370,7 @@ export default function Home() {
           onRoomTypeChange={setRoomType}
           onSprinklerHazardChange={setSprinklerHazard}
           onEntranceTypeChange={setEntranceType}
+          onEntranceSwingDirectionChange={setEntranceSwingDirection}
           onSplitPartition={splitPartition}
           onResetPartitions={resetPartitions}
           onMergePartition={mergePartition}

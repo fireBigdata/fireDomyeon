@@ -1,6 +1,13 @@
-import type { EntranceType, RoomType, Structure, StructureType } from "@/types/floorplan";
+import type {
+  EntranceSwingDirection,
+  EntranceType,
+  RoomType,
+  Structure,
+  StructureType,
+} from "@/types/floorplan";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
 import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
+import { DEFAULT_ENTRANCE_SWING_DIRECTION } from "@/constants/entranceSwing";
 import { createId } from "@/lib/id";
 import { clonePartitionTree } from "@/lib/partitionTree";
 
@@ -15,7 +22,8 @@ export function createStructure(
   type: StructureType,
   rect: StructureRect,
   roomType?: RoomType,
-  entranceType?: EntranceType
+  entranceType?: EntranceType,
+  entranceSwingDirection?: EntranceSwingDirection
 ): Structure {
   return {
     id: createId("structure"),
@@ -27,7 +35,10 @@ export function createStructure(
     rotation: 0,
     ...(type === "room" ? { roomType: roomType ?? DEFAULT_ROOM_TYPE } : {}),
     ...(type === "entrance"
-      ? { entranceType: entranceType ?? DEFAULT_ENTRANCE_TYPE }
+      ? {
+          entranceType: entranceType ?? DEFAULT_ENTRANCE_TYPE,
+          entranceSwingDirection: entranceSwingDirection ?? DEFAULT_ENTRANCE_SWING_DIRECTION,
+        }
       : {}),
   };
 }

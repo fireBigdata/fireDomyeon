@@ -12,6 +12,7 @@ import { pixelAreaToSquareMeters, pixelLengthToMeters } from "@/lib/area";
 import { getStructureLabel } from "@/lib/structureLabel";
 import { snapRectPosition } from "@/lib/structureSnapping";
 import PartitionShape from "./PartitionShape";
+import EntranceSwingArc from "./EntranceSwingArc";
 
 type StructureShapeProps = {
   structure: Structure;
@@ -244,6 +245,16 @@ export default function StructureShape({
           listening={false}
         />
       </Group>
+      {isEntrance && structure.entranceSwingDirection && (
+        // Sibling of contentRef (not a child of it) so the door-swing arc,
+        // which sweeps well past the entrance's own rect, isn't folded into
+        // the Transformer's selection/resize bounds.
+        <EntranceSwingArc
+          width={structure.width}
+          height={structure.height}
+          direction={structure.entranceSwingDirection}
+        />
+      )}
       {stairsFloorLabel && (
         // Sits centered just below the stairs rectangle, outside contentRef
         // (like the tooltip below) so it doesn't get folded into the

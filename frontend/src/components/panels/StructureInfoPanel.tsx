@@ -1,11 +1,20 @@
 "use client";
 
-import type { EntranceType, PartitionDirection, RoomType, SprinklerHazardClass, Structure } from "@/types/floorplan";
+import type {
+  EntranceSwingDirection,
+  EntranceType,
+  PartitionDirection,
+  RoomType,
+  SprinklerHazardClass,
+  Structure,
+} from "@/types/floorplan";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
 import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
+import { DEFAULT_ENTRANCE_SWING_DIRECTION } from "@/constants/entranceSwing";
 import { DEFAULT_SPRINKLER_HAZARD, SPRINKLER_HAZARD_LABELS, SPRINKLER_HAZARD_ORDER } from "@/constants/sprinklerHazard";
 import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
 import EntranceTypeSelect from "@/components/panels/EntranceTypeSelect";
+import EntranceSwingDirectionSelect from "@/components/panels/EntranceSwingDirectionSelect";
 import { ROOT_LEAF_ID, computeEffectivePixelArea, findPartitionNode } from "@/lib/partitionTree";
 import { formatArea, pixelAreaToSquareMeters } from "@/lib/area";
 import { isEntranceStructure } from "@/lib/structureArea";
@@ -19,6 +28,10 @@ type StructureInfoPanelProps = {
   onRoomTypeChange: (id: string, roomType: RoomType) => void;
   onSprinklerHazardChange: (id: string, hazard: SprinklerHazardClass) => void;
   onEntranceTypeChange: (id: string, entranceType: EntranceType) => void;
+  onEntranceSwingDirectionChange: (
+    id: string,
+    entranceSwingDirection: EntranceSwingDirection
+  ) => void;
   onSplitPartition: (
     structureId: string,
     leafId: string,
@@ -48,6 +61,7 @@ export default function StructureInfoPanel({
   onRoomTypeChange,
   onSprinklerHazardChange,
   onEntranceTypeChange,
+  onEntranceSwingDirectionChange,
   onSplitPartition,
   onResetPartitions,
   onMergePartition,
@@ -228,13 +242,23 @@ export default function StructureInfoPanel({
       )}
 
       {isEntrance && (
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-gray-500">출입구 종류</span>
-          <EntranceTypeSelect
-            value={structure.entranceType ?? DEFAULT_ENTRANCE_TYPE}
-            onChange={(value) => onEntranceTypeChange(structure.id, value)}
-          />
-        </label>
+        <>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-gray-500">열리는 방향</span>
+            <EntranceSwingDirectionSelect
+              value={structure.entranceSwingDirection ?? DEFAULT_ENTRANCE_SWING_DIRECTION}
+              onChange={(value) => onEntranceSwingDirectionChange(structure.id, value)}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-gray-500">출입구 종류</span>
+            <EntranceTypeSelect
+              value={structure.entranceType ?? DEFAULT_ENTRANCE_TYPE}
+              onChange={(value) => onEntranceTypeChange(structure.id, value)}
+            />
+          </label>
+        </>
       )}
 
       <button

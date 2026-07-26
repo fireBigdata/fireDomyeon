@@ -1,6 +1,13 @@
 "use client";
 
-import type { EntranceType, PartitionDirection, RoomType, SprinklerHazardClass, Structure } from "@/types/floorplan";
+import type {
+  EntranceSwingDirection,
+  EntranceType,
+  PartitionDirection,
+  RoomType,
+  SprinklerHazardClass,
+  Structure,
+} from "@/types/floorplan";
 import StructureInfoPanel from "@/components/panels/StructureInfoPanel";
 
 type RightPanelProps = {
@@ -11,6 +18,10 @@ type RightPanelProps = {
   onRoomTypeChange: (id: string, roomType: RoomType) => void;
   onSprinklerHazardChange: (id: string, hazard: SprinklerHazardClass) => void;
   onEntranceTypeChange: (id: string, entranceType: EntranceType) => void;
+  onEntranceSwingDirectionChange: (
+    id: string,
+    entranceSwingDirection: EntranceSwingDirection
+  ) => void;
   onSplitPartition: (
     structureId: string,
     leafId: string,
@@ -31,6 +42,7 @@ export default function RightPanel({
   onRoomTypeChange,
   onSprinklerHazardChange,
   onEntranceTypeChange,
+  onEntranceSwingDirectionChange,
   onSplitPartition,
   onResetPartitions,
   onMergePartition,
@@ -49,6 +61,7 @@ export default function RightPanel({
         onRoomTypeChange={onRoomTypeChange}
         onSprinklerHazardChange={onSprinklerHazardChange}
         onEntranceTypeChange={onEntranceTypeChange}
+        onEntranceSwingDirectionChange={onEntranceSwingDirectionChange}
         onSplitPartition={onSplitPartition}
         onResetPartitions={onResetPartitions}
         onMergePartition={onMergePartition}

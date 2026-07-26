@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
-import { EntranceType } from "@/types/floorplan";
+import { EntranceSwingDirection, EntranceType } from "@/types/floorplan";
 import type {
   ExtinguisherPlacement,
   HeatDetector,
@@ -23,11 +23,14 @@ import { findEvacuationRoutes, structureRouteAnchorForLeaf } from "@/lib/evacuat
 import { STRUCTURE_DEFAULTS, STRUCTURE_TYPE_ORDER } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS, ROOM_TYPE_ORDER } from "@/constants/roomTypes";
 import { ENTRANCE_TYPE_DEFAULTS, ENTRANCE_TYPE_ORDER } from "@/constants/entranceTypes";
+import { DEFAULT_ENTRANCE_SWING_DIRECTION } from "@/constants/entranceSwing";
 import { isDoorStructure } from "@/lib/structureArea";
 import { getStructureLabel } from "@/lib/structureLabel";
 import { snapPointToTargets } from "@/lib/structureSnapping";
 import { detectEntranceOrientation, getEntrancePreviewRect } from "@/lib/entrancePlacement";
+import { detectEntranceSwingDirection } from "@/lib/entranceSwing";
 import StructureShape from "./StructureShape";
+import EntranceSwingArc from "./EntranceSwingArc";
 import HeatDetectorShape from "./HeatDetectorShape";
 import ExitLightShape from "./ExitLightShape";
 import SmokeDetectorShape from "./SmokeDetectorShape";
@@ -146,7 +149,8 @@ type FloorPlanCanvasProps = {
     rect: StructureRect,
     type: StructureType,
     roomType?: RoomType,
-    entranceType?: EntranceType
+    entranceType?: EntranceType,
+    entranceSwingDirection?: EntranceSwingDirection
   ) => void;
   onCancelPendingStructure: () => void;
 };
@@ -203,6 +207,16 @@ export default function FloorPlanCanvas({
   // Cursor content-space position captured right as the structure finished
   // being drawn — the choice overlay is centered here.
   const [choiceCenter, setChoiceCenter] = useState<{ x: number; y: number } | null>(null);
+  // 출입구 전용 1단계: 위치를 클릭한 직후, 용도(awaitingChoice)보다 먼저 열리는
+  // 방향(부채꼴)을 고르는 단계. 버튼이 아니라 마우스가 출입구의 좌/우, 상/하 중
+  // 어디에 있는지로 미리보기가 실시간으로 바뀌다가, 클릭하면 그 방향으로 확정되고
+  // awaitingSwingChoice가 꺼지며 awaitingChoice(용도 선택)가 켜진다.
+  const [awaitingSwingChoice, setAwaitingSwingChoice] = useState(false);
+  const [hoveredSwingDirection, setHoveredSwingDirection] =
+    useState<EntranceSwingDirection | null>(null);
+  const [pendingEntranceSwing, setPendingEntranceSwing] = useState<EntranceSwingDirection | null>(
+    null
+  );
 
   const registerNode = useCallback((id: string, node: Konva.Group | null) => {
     if (node) {
@@ -381,31 +395,58 @@ export default function FloorPlanCanvas({
   // 미리보기가 마우스를 따라다니다가 겹치는 구조물의 벽(가장 가까운 변)에 맞춰
   // 자동으로 가로/세로 방향을 바꾼다. 클릭하면 그 자리에서 바로 용도 선택으로 넘어간다.
   const handleEntranceMouseMove = useCallback(() => {
-    if (awaitingChoice) return;
+    if (awaitingChoice || awaitingSwingChoice) return;
     const pointer = stageRef.current?.getPointerPosition();
     if (!pointer) return;
     const point = toContentPoint(pointer);
     lastPointerContentRef.current = point;
     const orientation = detectEntranceOrientation(point, structures);
     setDrawRect(getEntrancePreviewRect(point, orientation));
-  }, [awaitingChoice, toContentPoint, structures]);
+  }, [awaitingChoice, awaitingSwingChoice, toContentPoint, structures]);
 
   const handleEntranceClick = useCallback(() => {
-    if (awaitingChoice) return;
+    if (awaitingChoice || awaitingSwingChoice) return;
     const pointer = stageRef.current?.getPointerPosition();
     if (!pointer) return;
     const point = toContentPoint(pointer);
     const orientation = detectEntranceOrientation(point, structures);
     setDrawRect(getEntrancePreviewRect(point, orientation));
     setChoiceCenter(point);
+    // 위치 지정 -> 열리는 방향(부채꼴) 지정 -> 용도 지정: 용도 선택
+    // (awaitingChoice)보다 먼저 열리는 방향부터 고르게 한다. 마우스를 아직
+    // 움직이지 않았을 때도 부채꼴이 바로 보이도록 기본값을 채워둔다.
+    setHoveredSwingDirection(DEFAULT_ENTRANCE_SWING_DIRECTION);
+    setAwaitingSwingChoice(true);
+  }, [awaitingChoice, awaitingSwingChoice, toContentPoint, structures]);
+
+  // 열리는 방향 단계: 버튼이 아니라, 마우스가 출입구를 기준으로 좌/우·상/하 중
+  // 어느 쪽에 있는지에 따라 미리보기 부채꼴이 실시간으로 바뀐다.
+  const handleSwingMouseMove = useCallback(() => {
+    if (!drawRect) return;
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!pointer) return;
+    const point = toContentPoint(pointer);
+    setHoveredSwingDirection(detectEntranceSwingDirection(drawRect, point));
+  }, [drawRect, toContentPoint]);
+
+  // 클릭하면 현재 미리보기 중인 방향으로 확정하고, 용도 선택 단계로 넘어간다.
+  const handleSwingClick = useCallback(() => {
+    setPendingEntranceSwing(hoveredSwingDirection ?? DEFAULT_ENTRANCE_SWING_DIRECTION);
+    setAwaitingSwingChoice(false);
     setAwaitingChoice(true);
-  }, [awaitingChoice, toContentPoint, structures]);
+  }, [hoveredSwingDirection]);
 
   const handleChooseType = useCallback(
     (value: string) => {
       if (!drawRect) return;
       if (pendingCategory === "entrance") {
-        onConfirmStructure(drawRect, "entrance", undefined, value as EntranceType);
+        onConfirmStructure(
+          drawRect,
+          "entrance",
+          undefined,
+          value as EntranceType,
+          pendingEntranceSwing ?? undefined
+        );
       } else {
         const choice = STRUCTURE_CATEGORY_CHOICES.find((option) => option.value === value);
         if (!choice) return;
@@ -415,15 +456,20 @@ export default function FloorPlanCanvas({
       setDrawRect(null);
       setAwaitingChoice(false);
       setChoiceCenter(null);
+      setPendingEntranceSwing(null);
+      setHoveredSwingDirection(null);
     },
-    [drawRect, pendingCategory, onConfirmStructure]
+    [drawRect, pendingCategory, onConfirmStructure, pendingEntranceSwing]
   );
 
   const handleCancelDraw = useCallback(() => {
     drawStartRef.current = null;
     setDrawRect(null);
     setAwaitingChoice(false);
+    setAwaitingSwingChoice(false);
     setChoiceCenter(null);
+    setPendingEntranceSwing(null);
+    setHoveredSwingDirection(null);
     onCancelPendingStructure();
   }, [onCancelPendingStructure]);
 
@@ -515,6 +561,13 @@ export default function FloorPlanCanvas({
     />
   );
 
+  // Direction currently shown as the door-swing preview: live-tracks the
+  // mouse while awaitingSwingChoice, then holds the confirmed value through
+  // the following 용도 선택 step.
+  const entranceSwingPreviewDirection = awaitingSwingChoice
+    ? hoveredSwingDirection
+    : pendingEntranceSwing;
+
   const choiceOptions = !pendingCategory
     ? []
     : pendingCategory === "entrance"
@@ -602,7 +655,11 @@ export default function FloorPlanCanvas({
         style={pendingCategory ? { cursor: "crosshair" } : undefined}
         onMouseDown={(e) => {
           if (pendingCategory === "entrance") {
-            handleEntranceClick();
+            if (awaitingSwingChoice) {
+              handleSwingClick();
+            } else {
+              handleEntranceClick();
+            }
             return;
           }
           if (pendingCategory === "structure") {
@@ -620,7 +677,9 @@ export default function FloorPlanCanvas({
         }}
         onMouseMove={
           pendingCategory === "entrance"
-            ? handleEntranceMouseMove
+            ? awaitingSwingChoice
+              ? handleSwingMouseMove
+              : handleEntranceMouseMove
             : pendingCategory === "structure"
               ? handleDrawMouseMove
               : undefined
@@ -729,6 +788,18 @@ export default function FloorPlanCanvas({
             dash={awaitingChoice ? undefined : [6, 4]}
             listening={false}
           />
+        )}
+        {drawRect && pendingCategory === "entrance" && entranceSwingPreviewDirection && (
+          // Live door-swing arc: tracks the mouse (left/right, up/down of
+          // the entrance) while awaitingSwingChoice, then holds the
+          // confirmed direction through the following 용도 선택 step.
+          <Group x={drawRect.x} y={drawRect.y} listening={false}>
+            <EntranceSwingArc
+              width={drawRect.width}
+              height={drawRect.height}
+              direction={entranceSwingPreviewDirection}
+            />
+          </Group>
         )}
         {evacuationRoutes.map((route, index) => {
           if (route.points.length < 2) return null;

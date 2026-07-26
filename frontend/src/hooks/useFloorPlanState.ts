@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   HeatDetectorType,
   SprinklerHeadType,
+  type EntranceSwingDirection,
   type EntranceType,
   type ExtinguisherPlacement,
   type FacilityType,
@@ -245,12 +246,19 @@ export function useFloorPlanState(initial?: FloorPlanState) {
       type: StructureType,
       rect: StructureRect,
       roomType?: RoomType,
-      entranceType?: EntranceType
+      entranceType?: EntranceType,
+      entranceSwingDirection?: EntranceSwingDirection
     ) => {
       setState((prev) => {
         const floor = prev.floors.find((f) => f.id === prev.currentFloorId);
         if (!floor) return prev;
-        const structure = createStructure(type, rect, roomType, entranceType);
+        const structure = createStructure(
+          type,
+          rect,
+          roomType,
+          entranceType,
+          entranceSwingDirection
+        );
         return {
           ...prev,
           floors: prev.floors.map((f) =>
@@ -404,6 +412,18 @@ export function useFloorPlanState(initial?: FloorPlanState) {
         ...floor,
         structures: floor.structures.map((structure) =>
           structure.id === id ? { ...structure, entranceType } : structure
+        ),
+      }));
+    },
+    [updateCurrentFloor]
+  );
+
+  const setEntranceSwingDirection = useCallback(
+    (id: string, entranceSwingDirection: EntranceSwingDirection) => {
+      updateCurrentFloor((floor) => ({
+        ...floor,
+        structures: floor.structures.map((structure) =>
+          structure.id === id ? { ...structure, entranceSwingDirection } : structure
         ),
       }));
     },
@@ -908,6 +928,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
     setRoomType,
     setSprinklerHazard,
     setEntranceType,
+    setEntranceSwingDirection,
     selectStructure,
     selectPartition,
     splitPartition,

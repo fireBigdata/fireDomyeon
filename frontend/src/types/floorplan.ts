@@ -55,6 +55,19 @@ export enum EntranceType {
   DOOR = "DOOR", // 문
 }
 
+// Door swing direction: the compass quadrant (absolute, not wall-relative)
+// the door leaf sweeps through, hinged at the opposite corner of the
+// entrance's own rect. To add a new direction: extend this enum, add a
+// matching entry in ENTRANCE_SWING_DIRECTION_DEFAULTS/_ORDER
+// (constants/entranceSwing.ts), and its geometry in
+// components/canvas/EntranceSwingArc.tsx.
+export enum EntranceSwingDirection {
+  UP_LEFT = "UP_LEFT",
+  UP_RIGHT = "UP_RIGHT",
+  DOWN_LEFT = "DOWN_LEFT",
+  DOWN_RIGHT = "DOWN_RIGHT",
+}
+
 export type PartitionDirection = "vertical" | "horizontal";
 
 export type PartitionLeaf = {
@@ -95,6 +108,8 @@ export type Structure = {
   partitions?: PartitionNode;
   /** Only meaningful when type === "entrance". */
   entranceType?: EntranceType;
+  /** Only meaningful when type === "entrance". Which way the door leaf swings open. */
+  entranceSwingDirection?: EntranceSwingDirection;
   /**
    * Only meaningful when type === "room". Special sprinkler hazard
    * classification (NFTC 103 2.2.1) for this room; undefined/NONE uses the
