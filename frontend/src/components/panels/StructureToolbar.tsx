@@ -28,7 +28,7 @@ export default function StructureToolbar({ pendingCategory, onArm }: StructureTo
             pendingCategory === "structure" ? armedClass : "border-gray-300 bg-white"
           }`}
         >
-          + 구조물 추가
+          + 구조물 추가 (S)
         </button>
         <button
           type="button"
@@ -37,7 +37,7 @@ export default function StructureToolbar({ pendingCategory, onArm }: StructureTo
             pendingCategory === "entrance" ? armedClass : "border-gray-300 bg-white"
           }`}
         >
-          + 출입구 추가
+          + 출입구 추가 (E)
         </button>
       </div>
     </div>

@@ -116,6 +116,40 @@ export default function Home() {
     resetAll();
   };
 
+  // 전역 단축키: S(구조물 추가), E(출입구 추가), Delete/Backspace(선택된 구조물 삭제).
+  // 입력창에 포커스가 있거나 조합키(Ctrl/Alt/Meta)가 눌려있으면 무시한다.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isEditableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+      if (isEditableTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        handleArmStructure("structure");
+      } else if (e.key === "e" || e.key === "E") {
+        e.preventDefault();
+        handleArmStructure("entrance");
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (state.selectedStructureId) {
+          e.preventDefault();
+          if (
+            window.confirm(
+              "이 구조물을 삭제하시겠습니까? 연결된 구획, 감지기, 소화기도 함께 삭제됩니다."
+            )
+          ) {
+            removeStructure(state.selectedStructureId);
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [state.selectedStructureId, removeStructure, handleArmStructure]);
+
   const saveFloorPlan = useSaveFloorPlan();
 
   // Lets the equipment-selection page (a separate route with no shared

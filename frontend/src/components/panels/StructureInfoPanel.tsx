@@ -250,7 +250,7 @@ export default function StructureInfoPanel({
         }}
         className="mt-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
       >
-        구조물 삭제
+        구조물 삭제 (Delete)
       </button>
     </div>
   );
