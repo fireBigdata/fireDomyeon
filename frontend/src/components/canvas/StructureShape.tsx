@@ -207,8 +207,8 @@ export default function StructureShape({
           width={structure.width}
           height={structure.height}
           fill={typeAppearance?.fill ?? defaults.fill}
-          stroke={isSelected ? "#111827" : typeAppearance?.stroke ?? defaults.stroke}
-          strokeWidth={isSelected ? 2 : 1}
+          stroke={isSelected ? "#111827" : "#374151"}
+          strokeWidth={isSelected ? 4 : 3}
         />
         {structure.type === "stairs" && (
           <StairsLines width={structure.width} height={structure.height} />
