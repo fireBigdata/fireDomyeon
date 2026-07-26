@@ -16,6 +16,13 @@ type PartitionShapeProps = {
   selectedLeafId: string | null;
   onSelectLeaf: (leafId: string) => void;
   onResize: (splitId: string, ratio: number) => void;
+  /** Only passed while 피난동선 표시 mode is on (see FloorPlanCanvas) — reports
+   * the specific occupied partition under the pointer, so a route can start
+   * from exactly that partition instead of the whole (possibly partitioned)
+   * structure. Not fired for a deleted ("empty") partition — it has no
+   * routing anchor of its own. */
+  onHoverLeaf?: (leafId: string) => void;
+  onUnhoverLeaf?: (leafId: string) => void;
 };
 
 function setCursor(e: Konva.KonvaEventObject<Event>, cursor: string) {
@@ -29,6 +36,8 @@ export default function PartitionShape({
   selectedLeafId,
   onSelectLeaf,
   onResize,
+  onHoverLeaf,
+  onUnhoverLeaf,
 }: PartitionShapeProps) {
   if (node.kind === "leaf") {
     return (
@@ -47,6 +56,8 @@ export default function PartitionShape({
           e.cancelBubble = true;
           onSelectLeaf(node.id);
         }}
+        onMouseEnter={() => onHoverLeaf?.(node.id)}
+        onMouseLeave={() => onUnhoverLeaf?.(node.id)}
       />
     );
   }
@@ -98,6 +109,8 @@ export default function PartitionShape({
         selectedLeafId={selectedLeafId}
         onSelectLeaf={onSelectLeaf}
         onResize={onResize}
+        onHoverLeaf={onHoverLeaf}
+        onUnhoverLeaf={onUnhoverLeaf}
       />
       <PartitionShape
         node={children[1]}
@@ -105,6 +118,8 @@ export default function PartitionShape({
         selectedLeafId={selectedLeafId}
         onSelectLeaf={onSelectLeaf}
         onResize={onResize}
+        onHoverLeaf={onHoverLeaf}
+        onUnhoverLeaf={onUnhoverLeaf}
       />
       <Line
         x={dividerX}

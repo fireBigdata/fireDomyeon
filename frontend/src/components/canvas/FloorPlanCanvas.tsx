@@ -19,7 +19,7 @@ import type { StructureRect } from "@/lib/structureFactory";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
 import { CANVAS_BACKGROUND_COLOR, CANVAS_WIDTH_PX, CANVAS_HEIGHT_PX } from "@/constants/canvas";
 import { metersToPixelLength, pixelLengthToMeters } from "@/lib/area";
-import { findEvacuationRoutes } from "@/lib/evacuationRoute";
+import { findEvacuationRoutes, structureRouteAnchorForLeaf } from "@/lib/evacuationRoute";
 import { STRUCTURE_DEFAULTS, STRUCTURE_TYPE_ORDER } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS, ROOM_TYPE_ORDER } from "@/constants/roomTypes";
 import { ENTRANCE_TYPE_DEFAULTS, ENTRANCE_TYPE_ORDER } from "@/constants/entranceTypes";
@@ -224,6 +224,17 @@ export default function FloorPlanCanvas({
   const handleUnhoverStructure = useCallback((id: string) => {
     setHoveredStructureId((prev) => (prev === id ? null : prev));
   }, []);
+  // Which occupied partition (leaf id) of the hovered structure the pointer
+  // is specifically over, so the route starts exactly there instead of every
+  // occupied partition at once. null while hovering an undivided structure,
+  // a deleted/empty partition, or nothing at all.
+  const [hoveredPartitionId, setHoveredPartitionId] = useState<string | null>(null);
+  const handleHoverPartition = useCallback((_structureId: string, leafId: string) => {
+    setHoveredPartitionId(leafId);
+  }, []);
+  const handleUnhoverPartition = useCallback((_structureId: string, leafId: string) => {
+    setHoveredPartitionId((prev) => (prev === leafId ? null : prev));
+  }, []);
   // 1F routes to 공동현관(COMMON) only — it's the building's main entrance
   // and only physically exists on the ground floor; every other floor routes
   // to 비상구(EMERGENCY) instead. See findEvacuationRoutes' allowedExitTypes.
@@ -236,9 +247,14 @@ export default function FloorPlanCanvas({
   const evacuationRoutes = useMemo(
     () =>
       evacuationRouteMode && hoveredStructureId
-        ? findEvacuationRoutes(structures, hoveredStructureId, allowedExitTypes)
+        ? findEvacuationRoutes(
+            structures,
+            hoveredStructureId,
+            allowedExitTypes,
+            hoveredPartitionId
+          )
         : [],
-    [evacuationRouteMode, hoveredStructureId, structures, allowedExitTypes]
+    [evacuationRouteMode, hoveredStructureId, hoveredPartitionId, structures, allowedExitTypes]
   );
   // No route to any allowed exit exists from the hovered structure — shown
   // as a warning marker instead of silently drawing nothing.
@@ -491,8 +507,11 @@ export default function FloorPlanCanvas({
       interactionDisabled={!!pendingCategory}
       onHoverStructure={evacuationRouteMode ? handleHoverStructure : undefined}
       onUnhoverStructure={evacuationRouteMode ? handleUnhoverStructure : undefined}
+      onHoverPartition={evacuationRouteMode ? handleHoverPartition : undefined}
+      onUnhoverPartition={evacuationRouteMode ? handleUnhoverPartition : undefined}
       floorsToGround={floorsToGround}
       floorsToRoof={floorsToRoof}
+      evacuationRouteMode={evacuationRouteMode}
     />
   );
 
@@ -758,9 +777,12 @@ export default function FloorPlanCanvas({
           );
         })}
         {hoveredStructure && (
+          // Anchored at the specific partition the pointer is over (same
+          // anchor a route would have started from), falling back to the
+          // structure's first occupied partition when hovering an undivided
+          // structure or a deleted/empty region.
           <Group
-            x={hoveredStructure.x + hoveredStructure.width / 2}
-            y={hoveredStructure.y + hoveredStructure.height / 2}
+            {...structureRouteAnchorForLeaf(hoveredStructure, hoveredPartitionId)}
             listening={false}
           >
             <Circle radius={12} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />

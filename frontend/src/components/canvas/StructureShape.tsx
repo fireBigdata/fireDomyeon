@@ -35,11 +35,21 @@ type StructureShapeProps = {
    * computed and drawn. */
   onHoverStructure?: (id: string) => void;
   onUnhoverStructure?: (id: string) => void;
+  /** Only passed while 피난동선 표시 mode is on (see FloorPlanCanvas) — reports
+   * the specific occupied partition under the pointer (structure.id + leaf
+   * id), so a route can start from exactly that partition. Only meaningful
+   * when structure.type === "room" and structure.partitions is set. */
+  onHoverPartition?: (structureId: string, leafId: string) => void;
+  onUnhoverPartition?: (structureId: string, leafId: string) => void;
   /** Only meaningful when structure.type === "stairs" — floors between the
    * current floor and 1F / the rooftop, shown in this stairs' tooltip. See
    * app/page.tsx for how these are derived. */
   floorsToGround: number;
   floorsToRoof: number;
+  /** True while 피난동선 표시 mode is on (see FloorPlanCanvas) — the stairs'
+   * floor-movement label is only relevant alongside the evacuation route, so
+   * it's hidden the rest of the time. */
+  evacuationRouteMode?: boolean;
 };
 
 function StairsLines({ width, height }: { width: number; height: number }) {
@@ -78,8 +88,11 @@ export default function StructureShape({
   interactionDisabled,
   onHoverStructure,
   onUnhoverStructure,
+  onHoverPartition,
+  onUnhoverPartition,
   floorsToGround,
   floorsToRoof,
+  evacuationRouteMode,
 }: StructureShapeProps) {
   const contentRef = useRef<Konva.Group>(null);
 
@@ -131,11 +144,12 @@ export default function StructureShape({
     `가로: ${widthM.toFixed(1)}m`,
     `세로: ${heightM.toFixed(1)}m`,
   ];
-  // 계단은 대피 경로 판단에 바로 쓰이는 정보라, 선택 없이도 구조물 바로 아래에
-  // 항상 보이도록 별도 라벨로 표시한다 (아래 STAIRS_FLOOR_LABEL_HEIGHT 참고).
-  const stairsFloorLabel = isStairs
-    ? `1층까지 ${floorsToGround}개 층 · 옥상까지 ${floorsToRoof}개 층`
-    : null;
+  // 계단은 피난동선 표시 중에만 의미 있는 정보라, 그 모드가 켜져 있을 때만
+  // 구조물 바로 아래에 별도 라벨로 표시한다 (아래 STAIRS_FLOOR_LABEL_HEIGHT 참고).
+  const stairsFloorLabel =
+    isStairs && evacuationRouteMode
+      ? `▼ ${floorsToGround}층  ▲ ${floorsToRoof}층`
+      : null;
   const STAIRS_FLOOR_LABEL_HEIGHT = 18;
   const TOOLTIP_WIDTH = 150;
   const TOOLTIP_LINE_HEIGHT = 11 * 1.5;
@@ -207,6 +221,16 @@ export default function StructureShape({
             onResize={(splitId, ratio) =>
               onResizePartition(structure.id, splitId, ratio)
             }
+            onHoverLeaf={
+              onHoverPartition
+                ? (leafId) => onHoverPartition(structure.id, leafId)
+                : undefined
+            }
+            onUnhoverLeaf={
+              onUnhoverPartition
+                ? (leafId) => onUnhoverPartition(structure.id, leafId)
+                : undefined
+            }
           />
         )}
         <Text
@@ -223,10 +247,11 @@ export default function StructureShape({
       {stairsFloorLabel && (
         // Sits centered just below the stairs rectangle, outside contentRef
         // (like the tooltip below) so it doesn't get folded into the
-        // Transformer's selection bounds — always visible, not gated by
-        // isSelected, since it's safety info someone should see at a glance,
-        // not only on click. Widened past the structure's own width (stairs
-        // default to a narrow 110px) so the text isn't cramped.
+        // Transformer's selection bounds — shown whenever 피난동선 표시 mode is
+        // on, not gated by isSelected, since it's safety info someone should
+        // see at a glance, not only on click. Widened past the structure's
+        // own width (stairs default to a narrow 110px) so the text isn't
+        // cramped.
         <Group
           x={(structure.width - Math.max(structure.width, 140)) / 2}
           y={structure.height + 4}
