@@ -18,7 +18,7 @@ import type { HydrantPlacement } from "@/types/hydrant";
 import type { StructureRect } from "@/lib/structureFactory";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
 import { CANVAS_BACKGROUND_COLOR, CANVAS_WIDTH_PX, CANVAS_HEIGHT_PX } from "@/constants/canvas";
-import { metersToPixelLength, pixelLengthToMeters } from "@/lib/area";
+import { formatEvacuationTime, metersToPixelLength, pixelLengthToMeters } from "@/lib/area";
 import { findEvacuationRoutes, structureRouteAnchorForLeaf } from "@/lib/evacuationRoute";
 import { STRUCTURE_DEFAULTS, STRUCTURE_TYPE_ORDER } from "@/constants/structureDefaults";
 import { DEFAULT_ROOM_TYPE, ROOM_TYPE_DEFAULTS, ROOM_TYPE_ORDER } from "@/constants/roomTypes";
@@ -832,15 +832,18 @@ export default function FloorPlanCanvas({
                   fill="#ffffff"
                 />
               </Group>
-              <Group x={exit.x + 12} y={exit.y - 10} listening={false}>
-                <Rect width={64} height={20} fill="#111827" opacity={0.85} cornerRadius={4} />
+              <Group x={exit.x + 12} y={exit.y - 12} listening={false}>
+                <Rect width={120} height={36} fill="#111827" opacity={0.85} cornerRadius={4} />
                 <Text
-                  text={`${pixelLengthToMeters(route.totalDistancePx, scale).toFixed(1)}m`}
-                  width={64}
-                  height={20}
+                  text={`${pixelLengthToMeters(route.totalDistancePx, scale).toFixed(1)}m\n${formatEvacuationTime(
+                    pixelLengthToMeters(route.totalDistancePx, scale)
+                  )}`}
+                  width={120}
+                  height={36}
                   align="center"
                   verticalAlign="middle"
                   fontSize={11}
+                  lineHeight={1.4}
                   fill="#ffffff"
                 />
               </Group>

@@ -44,6 +44,21 @@ export function computeScaleForSiteDimensions(
   return linearFactor * linearFactor;
 }
 
+// Typical horizontal evacuation walking speed range (m/s) used to turn a
+// route's length into a rough time-to-exit estimate — the slower end
+// accounts for congestion/panic during an actual evacuation, the faster end
+// for an unobstructed walk (within the SFPE handbook's unimpeded walking
+// speed range).
+const EVACUATION_WALK_SPEED_MIN_MPS = 1.0;
+const EVACUATION_WALK_SPEED_MAX_MPS = 1.5;
+
+/** Turns a route length (meters) into a "X~Y초 소요" evacuation time estimate. */
+export function formatEvacuationTime(distanceMeters: number): string {
+  const minSeconds = Math.round(distanceMeters / EVACUATION_WALK_SPEED_MAX_MPS);
+  const maxSeconds = Math.round(distanceMeters / EVACUATION_WALK_SPEED_MIN_MPS);
+  return `${minSeconds}~${maxSeconds}초 소요`;
+}
+
 export function toPyeong(squareMeters: number): number {
   return squareMeters / SQUARE_METERS_PER_PYEONG;
 }
