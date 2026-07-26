@@ -8,13 +8,8 @@ import type { ExitLightSummary } from "@/lib/exitLightPlacement";
 import type { SmokeDetectorSummary } from "@/lib/smokeDetectorPlacement";
 import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import type { HydrantSummary } from "@/hooks/useHydrantPlacement";
-import FacilityTypeSelect from "@/components/panels/FacilityTypeSelect";
 import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
-import FireResistanceToggle from "@/components/panels/FireResistanceToggle";
 import EvacuationRoutePanel from "@/components/panels/EvacuationRoutePanel";
-import BuildingScaleInput, {
-  type BuildingScaleFields,
-} from "@/components/panels/BuildingScaleInput";
 import AutoPlaceAllButton from "@/components/panels/AutoPlaceAllButton";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
@@ -25,7 +20,6 @@ import HydrantPanel from "@/components/panels/HydrantPanel";
 
 type LeftPanelProps = {
   facilityType: FacilityType;
-  onFacilityTypeChange: (value: FacilityType) => void;
   pendingCategory: StructureCategory | null;
   onArmStructure: (category: StructureCategory) => void;
   selectedExtinguisherProduct: EquipmentProduct | null;
@@ -43,12 +37,8 @@ type LeftPanelProps = {
   smokeDetectorError: string | null;
   onAutoPlaceSmokeDetectors: () => void;
   smokeDetectorSummary: SmokeDetectorSummary | null;
-  isFireResistantStructure: boolean;
-  onFireResistantStructureChange: (value: boolean) => void;
   evacuationRouteMode: boolean;
   onToggleEvacuationRoute: () => void;
-  buildingScale: BuildingScaleFields;
-  onBuildingScaleChange: (patch: Partial<BuildingScaleFields>) => void;
   onAutoPlaceSprinklers: () => void;
   sprinklerSummary: SprinklerSummary | null;
   selectedHydrantProduct: EquipmentProduct | null;
@@ -60,7 +50,6 @@ type LeftPanelProps = {
 
 export default function LeftPanel({
   facilityType,
-  onFacilityTypeChange,
   pendingCategory,
   onArmStructure,
   selectedExtinguisherProduct,
@@ -78,12 +67,8 @@ export default function LeftPanel({
   smokeDetectorError,
   onAutoPlaceSmokeDetectors,
   smokeDetectorSummary,
-  isFireResistantStructure,
-  onFireResistantStructureChange,
   evacuationRouteMode,
   onToggleEvacuationRoute,
-  buildingScale,
-  onBuildingScaleChange,
   onAutoPlaceSprinklers,
   sprinklerSummary,
   selectedHydrantProduct,
@@ -94,14 +79,8 @@ export default function LeftPanel({
 }: LeftPanelProps) {
   return (
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
-      <FacilityTypeSelect value={facilityType} onChange={onFacilityTypeChange} />
       <StructureToolbar pendingCategory={pendingCategory} onArm={onArmStructure} />
-      <FireResistanceToggle
-        isFireResistantStructure={isFireResistantStructure}
-        onChange={onFireResistantStructureChange}
-      />
       <EvacuationRoutePanel isActive={evacuationRouteMode} onToggle={onToggleEvacuationRoute} />
-      <BuildingScaleInput value={buildingScale} onChange={onBuildingScaleChange} />
       <AutoPlaceAllButton onAutoPlaceAll={onAutoPlaceAll} />
       <ExtinguisherPanel
         facilityType={facilityType}

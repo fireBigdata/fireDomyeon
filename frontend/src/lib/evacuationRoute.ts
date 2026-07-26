@@ -18,6 +18,23 @@ function rectsAdjacent(a: Box, b: Box): boolean {
   );
 }
 
+/**
+ * Midpoint of the segment where two adjacent boxes touch — stands in for
+ * "there's an opening right here" when two structures are walkable into each
+ * other without an actual door structure (see the CORRIDOR-to-CORRIDOR rule
+ * in findEvacuationRoutes). Works for boxes touching along a vertical edge
+ * (side by side), a horizontal edge (stacked), or just a corner: on each
+ * axis the two boxes' spans either overlap by the real shared length (the
+ * doorway's width) or coincide at the touching coordinate, so the midpoint
+ * of that overlap is the right point either way.
+ */
+function sharedBoundaryPoint(a: Box, b: Box): Point {
+  return {
+    x: (Math.max(a.x, b.x) + Math.min(a.x + a.width, b.x + b.width)) / 2,
+    y: (Math.max(a.y, b.y) + Math.min(a.y + a.height, b.y + b.height)) / 2,
+  };
+}
+
 function center(structure: Structure): Point {
   return { x: structure.x + structure.width / 2, y: structure.y + structure.height / 2 };
 }
@@ -138,10 +155,15 @@ type AnchorNode = {
  * matching how doors actually work, rooms/corridors never connect directly
  * to each other just because their rectangles happen to touch, you always
  * have to go through an opening, and only the specific partition next to the
- * door reaches it directly — or (b) by belonging to the same structure AND
+ * door reaches it directly — (b) by belonging to the same structure AND
  * being physically adjacent partitions (sharing an edge), so the route can
  * step into a neighboring partition directly but can't skip past one it
- * isn't touching to reach a door on the far side. Dijkstra's
+ * isn't touching to reach a door on the far side — or (c) by both being
+ * CORRIDOR structures that are physically adjacent: hallways are already one
+ * continuous open path, so two corridor segments connect wherever they touch
+ * without needing an actual door between them (unlike rooms), routed through
+ * a synthetic waypoint anchor at the middle of the touching boundary as if a
+ * door sat right there. Dijkstra's
  * algorithm (uniform-cost shortest-path search — the same technique behind
  * turn-by-turn navigation and most game/robot pathfinding "AI") runs from
  * the anchor of the start structure matching `startHoveredLeafId` — the
@@ -223,6 +245,43 @@ export function findEvacuationRoutes(
         for (const b of otherAnchors) {
           if (!rectsAdjacent(a.box, b.box)) continue;
           addEdge(a.id, b.id, distance(a.point, b.point));
+        }
+      }
+    }
+  }
+
+  // Two CORRIDOR structures connect wherever they're physically adjacent,
+  // without needing an actual entrance structure between them — a hallway is
+  // already one continuous open path, unlike rooms/other structures, which
+  // always require going through a door (see the model description above).
+  // Routed through a synthetic waypoint anchor at the middle of the touching
+  // boundary (as if a door sat right there) rather than one straight edge
+  // between the two corridors' own anchors, so the drawn route bends through
+  // the actual shared wall instead of cutting a diagonal line across both
+  // rectangles.
+  let corridorLinkCount = 0;
+  for (let i = 0; i < walkable.length; i++) {
+    const a = walkable[i];
+    if (a.type !== "corridor") continue;
+    const aAnchors = anchorsByStructure.get(a.id) ?? [];
+    for (let j = i + 1; j < walkable.length; j++) {
+      const b = walkable[j];
+      if (b.type !== "corridor") continue;
+      const bAnchors = anchorsByStructure.get(b.id) ?? [];
+      for (const anchorA of aAnchors) {
+        for (const anchorB of bAnchors) {
+          if (!rectsAdjacent(anchorA.box, anchorB.box)) continue;
+          const linkPoint = sharedBoundaryPoint(anchorA.box, anchorB.box);
+          const linkAnchor: AnchorNode = {
+            id: `corridor-link#${corridorLinkCount++}`,
+            structureId: a.id,
+            leafId: null,
+            point: linkPoint,
+            box: { x: linkPoint.x, y: linkPoint.y, width: 0, height: 0 },
+          };
+          anchorById.set(linkAnchor.id, linkAnchor);
+          addEdge(anchorA.id, linkAnchor.id, distance(anchorA.point, linkPoint));
+          addEdge(linkAnchor.id, anchorB.id, distance(linkPoint, anchorB.point));
         }
       }
     }

@@ -11,11 +11,11 @@ import { useSmokeDetectorPlacement } from "@/hooks/useSmokeDetectorPlacement";
 import { useSprinklerPlacement } from "@/hooks/useSprinklerPlacement";
 import { useHydrantPlacement } from "@/hooks/useHydrantPlacement";
 import { saveFloorPlanStateToStorage } from "@/lib/floorPlanStorage";
+import { isEntranceStructure } from "@/lib/structureArea";
 import TopBar from "@/components/layout/TopBar";
 import FloorBar from "@/components/layout/FloorBar";
 import LeftPanel from "@/components/layout/LeftPanel";
 import RightPanel from "@/components/layout/RightPanel";
-import AreaSummary from "@/components/panels/AreaSummary";
 import InitialSetupModal from "@/components/panels/InitialSetupModal";
 import DynamicFloorPlanCanvas from "@/components/canvas/DynamicFloorPlanCanvas";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
@@ -84,6 +84,8 @@ export default function Home() {
   const floorsToGround = Math.abs(currentFloorIndex - state.groundMarkerIndex);
   const floorsToRoof = state.floors.length - currentFloorIndex;
 
+  const entranceCount = currentFloor.structures.filter(isEntranceStructure).length;
+
   // Shown once, right after the page finishes restoring any saved plan (so a
   // returning user with an already-configured site doesn't see it flash
   // open), until the user confirms (setSiteDimensions fills in siteWidthM)
@@ -91,6 +93,10 @@ export default function Home() {
   const [setupDismissed, setSetupDismissed] = useState(false);
   const showSetupModal =
     hasHydrated && state.siteWidthM === undefined && !setupDismissed;
+
+  // Reopens the same InitialSetupModal on demand via TopBar's "건물 정보"
+  // button, so the user can review/edit site dimensions after initial setup.
+  const [showBuildingInfoModal, setShowBuildingInfoModal] = useState(false);
 
   const handleArmStructure = useCallback(
     (category: StructureCategory) => {
@@ -246,14 +252,22 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-gray-50">
-      {showSetupModal && (
+      {(showSetupModal || showBuildingInfoModal) && (
         <InitialSetupModal
           facilityType={state.facilityType}
           onFacilityTypeChange={setFacilityType}
+          isFireResistantStructure={state.isFireResistantStructure ?? false}
+          onFireResistantStructureChange={setIsFireResistantStructure}
+          initialWidthM={state.siteWidthM}
+          initialHeightM={state.siteHeightM}
           onConfirm={(siteWidthM, siteHeightM) => {
             setSiteDimensions(siteWidthM, siteHeightM);
+            setShowBuildingInfoModal(false);
           }}
-          onSkip={() => setSetupDismissed(true)}
+          onSkip={() => {
+            setSetupDismissed(true);
+            setShowBuildingInfoModal(false);
+          }}
         />
       )}
 
@@ -263,6 +277,7 @@ export default function Home() {
         onSave={() => saveFloorPlan.mutate(state)}
         isSaving={saveFloorPlan.isPending}
         onResetAll={handleResetAll}
+        onOpenBuildingInfo={() => setShowBuildingInfoModal(true)}
       />
 
       <FloorBar
@@ -280,7 +295,6 @@ export default function Home() {
       <div className="flex flex-1">
         <LeftPanel
           facilityType={state.facilityType}
-          onFacilityTypeChange={setFacilityType}
           pendingCategory={pendingCategory}
           onArmStructure={handleArmStructure}
           selectedExtinguisherProduct={selectedExtinguisherProduct}
@@ -298,18 +312,8 @@ export default function Home() {
           smokeDetectorError={smokeDetectorError}
           onAutoPlaceSmokeDetectors={autoPlaceSmokeDetectors}
           smokeDetectorSummary={smokeDetectorSummary}
-          isFireResistantStructure={state.isFireResistantStructure ?? false}
-          onFireResistantStructureChange={setIsFireResistantStructure}
           evacuationRouteMode={evacuationRouteMode}
           onToggleEvacuationRoute={() => setEvacuationRouteMode((prev) => !prev)}
-          buildingScale={{
-            buildingGroundFloorCount: state.buildingGroundFloorCount,
-            buildingBasementFloorCount: state.buildingBasementFloorCount,
-            buildingAreaSqm: state.buildingAreaSqm,
-            buildingTotalFloorAreaSqm: state.buildingTotalFloorAreaSqm,
-            buildingSiteAreaSqm: state.buildingSiteAreaSqm,
-          }}
-          onBuildingScaleChange={setBuildingScale}
           onAutoPlaceSprinklers={autoPlaceSprinklers}
           sprinklerSummary={sprinklerSummary}
           selectedHydrantProduct={selectedHydrantProduct}
@@ -320,10 +324,6 @@ export default function Home() {
         />
 
         <main className="flex flex-1 flex-col items-center gap-4 overflow-auto p-6">
-          <AreaSummary
-            totalArea={totalArea}
-            structureCount={currentFloor.structures.length}
-          />
           <DynamicFloorPlanCanvas
             structures={currentFloor.structures}
             scale={state.scale}
@@ -366,6 +366,19 @@ export default function Home() {
           structure={selectedStructure}
           scale={state.scale}
           selectedPartitionId={state.selectedPartitionId}
+          totalArea={totalArea}
+          structureCount={
+            currentFloor.structures.length - entranceCount
+          }
+          entranceCount={entranceCount}
+          buildingScale={{
+            buildingGroundFloorCount: state.buildingGroundFloorCount,
+            buildingBasementFloorCount: state.buildingBasementFloorCount,
+            buildingAreaSqm: state.buildingAreaSqm,
+            buildingTotalFloorAreaSqm: state.buildingTotalFloorAreaSqm,
+            buildingSiteAreaSqm: state.buildingSiteAreaSqm,
+          }}
+          onBuildingScaleChange={setBuildingScale}
           onChange={updateStructure}
           onRoomTypeChange={setRoomType}
           onSprinklerHazardChange={setSprinklerHazard}

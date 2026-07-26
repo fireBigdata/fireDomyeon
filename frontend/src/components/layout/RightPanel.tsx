@@ -9,11 +9,17 @@ import type {
   Structure,
 } from "@/types/floorplan";
 import StructureInfoPanel from "@/components/panels/StructureInfoPanel";
+import type { BuildingScaleFields } from "@/components/panels/BuildingScaleInput";
 
 type RightPanelProps = {
   structure: Structure | null;
   scale: number;
   selectedPartitionId: string | null;
+  totalArea: number;
+  structureCount: number;
+  entranceCount: number;
+  buildingScale: BuildingScaleFields;
+  onBuildingScaleChange: (patch: Partial<BuildingScaleFields>) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
   onRoomTypeChange: (id: string, roomType: RoomType) => void;
   onSprinklerHazardChange: (id: string, hazard: SprinklerHazardClass) => void;
@@ -38,6 +44,11 @@ export default function RightPanel({
   structure,
   scale,
   selectedPartitionId,
+  totalArea,
+  structureCount,
+  entranceCount,
+  buildingScale,
+  onBuildingScaleChange,
   onChange,
   onRoomTypeChange,
   onSprinklerHazardChange,
@@ -57,6 +68,11 @@ export default function RightPanel({
         structure={structure}
         scale={scale}
         selectedPartitionId={selectedPartitionId}
+        totalArea={totalArea}
+        structureCount={structureCount}
+        entranceCount={entranceCount}
+        buildingScale={buildingScale}
+        onBuildingScaleChange={onBuildingScaleChange}
         onChange={onChange}
         onRoomTypeChange={onRoomTypeChange}
         onSprinklerHazardChange={onSprinklerHazardChange}

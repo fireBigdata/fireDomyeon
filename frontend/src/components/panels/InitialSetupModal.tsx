@@ -4,25 +4,36 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import type { FacilityType } from "@/types/floorplan";
 import FacilityTypeSelect from "./FacilityTypeSelect";
+import FireResistanceToggle from "./FireResistanceToggle";
 
 type InitialSetupModalProps = {
   facilityType: FacilityType;
   onFacilityTypeChange: (value: FacilityType) => void;
+  isFireResistantStructure: boolean;
+  onFireResistantStructureChange: (value: boolean) => void;
   onConfirm: (siteWidthM: number, siteHeightM: number) => void;
   onSkip: () => void;
+  initialWidthM?: number;
+  initialHeightM?: number;
 };
 
 /** Centered form shown once, right after the design page loads, so the user
  * can set 시설물 유형 and the building site's 가로/세로 before drawing —
- * used to compute 대지면적 and adjust the drawing's pixel↔meter ratio. */
+ * used to compute 대지면적 and adjust the drawing's pixel↔meter ratio.
+ * Reused as the "건물 정보" button's target, prefilled via initialWidthM/
+ * initialHeightM when the site is already configured. */
 export default function InitialSetupModal({
   facilityType,
   onFacilityTypeChange,
+  isFireResistantStructure,
+  onFireResistantStructureChange,
   onConfirm,
   onSkip,
+  initialWidthM,
+  initialHeightM,
 }: InitialSetupModalProps) {
-  const [widthInput, setWidthInput] = useState("");
-  const [heightInput, setHeightInput] = useState("");
+  const [widthInput, setWidthInput] = useState(initialWidthM?.toString() ?? "");
+  const [heightInput, setHeightInput] = useState(initialHeightM?.toString() ?? "");
 
   const width = Number(widthInput);
   const height = Number(heightInput);
@@ -49,6 +60,13 @@ export default function InitialSetupModal({
 
         <div className="mt-4">
           <FacilityTypeSelect value={facilityType} onChange={onFacilityTypeChange} />
+        </div>
+
+        <div className="mt-3">
+          <FireResistanceToggle
+            isFireResistantStructure={isFireResistantStructure}
+            onChange={onFireResistantStructureChange}
+          />
         </div>
 
         <div className="mt-3 flex gap-2">

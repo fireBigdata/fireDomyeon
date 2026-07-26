@@ -8,6 +8,7 @@ type TopBarProps = {
   onSave: () => void;
   isSaving: boolean;
   onResetAll: () => void;
+  onOpenBuildingInfo: () => void;
 };
 
 export default function TopBar({
@@ -16,6 +17,7 @@ export default function TopBar({
   onSave,
   isSaving,
   onResetAll,
+  onOpenBuildingInfo,
 }: TopBarProps) {
   const handleResetAll = () => {
     if (window.confirm("도면 전체(모든 층)를 초기화하시겠습니까? 되돌릴 수 없습니다.")) {
@@ -31,6 +33,13 @@ export default function TopBar({
         className="rounded-md border border-transparent px-2 py-1 text-lg font-semibold text-gray-800 hover:border-gray-300 focus:border-gray-300 focus:outline-none"
       />
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onOpenBuildingInfo}
+          className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          건물 정보
+        </button>
         <Link
           href="/equipment-selection"
           className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"

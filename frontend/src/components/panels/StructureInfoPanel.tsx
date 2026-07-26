@@ -19,11 +19,20 @@ import { ROOT_LEAF_ID, computeEffectivePixelArea, findPartitionNode } from "@/li
 import { formatArea, pixelAreaToSquareMeters } from "@/lib/area";
 import { isEntranceStructure } from "@/lib/structureArea";
 import { getStructureLabel } from "@/lib/structureLabel";
+import AreaSummary from "@/components/panels/AreaSummary";
+import BuildingScaleInput, {
+  type BuildingScaleFields,
+} from "@/components/panels/BuildingScaleInput";
 
 type StructureInfoPanelProps = {
   structure: Structure | null;
   scale: number;
   selectedPartitionId: string | null;
+  totalArea: number;
+  structureCount: number;
+  entranceCount: number;
+  buildingScale: BuildingScaleFields;
+  onBuildingScaleChange: (patch: Partial<BuildingScaleFields>) => void;
   onChange: (id: string, changes: Partial<Structure>) => void;
   onRoomTypeChange: (id: string, roomType: RoomType) => void;
   onSprinklerHazardChange: (id: string, hazard: SprinklerHazardClass) => void;
@@ -57,6 +66,11 @@ export default function StructureInfoPanel({
   structure,
   scale,
   selectedPartitionId,
+  totalArea,
+  structureCount,
+  entranceCount,
+  buildingScale,
+  onBuildingScaleChange,
   onChange,
   onRoomTypeChange,
   onSprinklerHazardChange,
@@ -71,8 +85,16 @@ export default function StructureInfoPanel({
 }: StructureInfoPanelProps) {
   if (!structure) {
     return (
-      <div className="text-sm text-gray-400">
-        캔버스에서 구조물을 선택하면 정보가 표시됩니다.
+      <div className="flex flex-col gap-3">
+        <div className="text-sm text-gray-400">
+          캔버스에서 구조물을 선택하면 정보가 표시됩니다.
+        </div>
+        <AreaSummary
+          totalArea={totalArea}
+          structureCount={structureCount}
+          entranceCount={entranceCount}
+        />
+        <BuildingScaleInput value={buildingScale} onChange={onBuildingScaleChange} />
       </div>
     );
   }
@@ -95,38 +117,42 @@ export default function StructureInfoPanel({
         {getStructureLabel(structure)}
       </h3>
 
-      <InfoRow label="x" value={structure.x.toFixed(0)} />
-      <InfoRow label="y" value={structure.y.toFixed(0)} />
-
-      <label className="flex items-center justify-between text-sm">
-        <span className="text-gray-500">width</span>
-        <input
-          type="number"
-          min={10}
-          value={Math.round(structure.width)}
-          onChange={(e) =>
-            onChange(structure.id, {
-              width: Math.max(10, Number(e.target.value) || 10),
-            })
-          }
-          className="w-24 rounded-md border border-gray-300 px-2 py-1 text-right text-sm"
-        />
-      </label>
-
-      <label className="flex items-center justify-between text-sm">
-        <span className="text-gray-500">height</span>
-        <input
-          type="number"
-          min={10}
-          value={Math.round(structure.height)}
-          onChange={(e) =>
-            onChange(structure.id, {
-              height: Math.max(10, Number(e.target.value) || 10),
-            })
-          }
-          className="w-24 rounded-md border border-gray-300 px-2 py-1 text-right text-sm"
-        />
-      </label>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+        <span>
+          x <span className="font-medium text-gray-800">{structure.x.toFixed(0)}</span>
+        </span>
+        <span>
+          y <span className="font-medium text-gray-800">{structure.y.toFixed(0)}</span>
+        </span>
+        <label className="flex items-center gap-1">
+          w
+          <input
+            type="number"
+            min={10}
+            value={Math.round(structure.width)}
+            onChange={(e) =>
+              onChange(structure.id, {
+                width: Math.max(10, Number(e.target.value) || 10),
+              })
+            }
+            className="w-12 rounded-md border border-gray-300 px-1 py-0.5 text-right text-xs"
+          />
+        </label>
+        <label className="flex items-center gap-1">
+          h
+          <input
+            type="number"
+            min={10}
+            value={Math.round(structure.height)}
+            onChange={(e) =>
+              onChange(structure.id, {
+                height: Math.max(10, Number(e.target.value) || 10),
+              })
+            }
+            className="w-12 rounded-md border border-gray-300 px-1 py-0.5 text-right text-xs"
+          />
+        </label>
+      </div>
 
       {area !== null && <InfoRow label="면적" value={formatArea(area)} />}
 
