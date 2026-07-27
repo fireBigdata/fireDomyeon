@@ -5,8 +5,9 @@ import { predictEquipmentCounts } from "@/lib/api";
 import type { FloorPlanSummary } from "@/hooks/useFloorPlanSummary";
 
 /** Reference-only estimate for 예비펌프/주펌프/충압펌프/댐퍼/급기팬/배기팬/자동폐쇄장치/
- * 발신기 counts, derived from the building-scale fields on FloorPlanSummary.
- * Returns null until all 5 inputs have been entered on the drawing page. */
+ * 발신기/탬퍼스위치/압력스위치/유수검지스위치 counts, derived from the building-scale
+ * fields on FloorPlanSummary. Returns null until all 5 inputs have been
+ * entered on the drawing page. */
 export function useEquipmentCountPrediction(
   floorPlanSummary: FloorPlanSummary | null
 ) {

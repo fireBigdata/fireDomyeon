@@ -21,6 +21,9 @@ export const ML_ESTIMATED_EQUIPMENT_NAMES: ReadonlySet<EquipmentName> = new Set(
   "배기팬",
   "자동폐쇄장치",
   "발신기",
+  "탬퍼스위치",
+  "압력스위치",
+  "유수검지스위치",
 ]);
 
 /**
@@ -29,8 +32,10 @@ export const ML_ESTIMATED_EQUIPMENT_NAMES: ReadonlySet<EquipmentName> = new Set(
  * types that are actually placed on the drawing (extinguishers, heat
  * detectors, smoke detectors, exit lights, sprinkler heads, indoor hydrants)
  * have real counts. ML_ESTIMATED_EQUIPMENT_NAMES falls back to `mlPrediction`
- * (a reference-only estimate) when available; everything else falls back to
- * DEFAULT_QUANTITY since the drawing page has no placement data for it yet.
+ * (a reference-only estimate, now also covering 탬퍼스위치/압력스위치/유수검지스위치
+ * as of the 2026-07-27 fire-equipment-predictor retrain) when available;
+ * everything else falls back to DEFAULT_QUANTITY since the drawing page has
+ * no placement data for it yet.
  */
 export function getFloorPlanInstalledCount(
   name: EquipmentName,
