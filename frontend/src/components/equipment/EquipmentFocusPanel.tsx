@@ -10,7 +10,7 @@ import type {
   EquipmentSelectionValue,
 } from "@/types/equipmentSelection";
 
-type ProductPanelProps = {
+type EquipmentFocusPanelProps = {
   name: EquipmentName;
   products: EquipmentProduct[];
   selectedValue: EquipmentSelectionValue;
@@ -47,7 +47,13 @@ function sortProducts(
   });
 }
 
-export default function ProductPanel({
+/**
+ * Main panel of the equipment-selection page — always focused on exactly one
+ * equipment type at a time (picked via EquipmentSidebar / the 이전·다음
+ * footer). "설치 안 함" is a checkbox above the grid rather than a product
+ * card, since it isn't a product.
+ */
+export default function EquipmentFocusPanel({
   name,
   products,
   selectedValue,
@@ -55,12 +61,13 @@ export default function ProductPanel({
   onSelect,
   onQuantityChange,
   mlEstimateNote,
-}: ProductPanelProps) {
+}: EquipmentFocusPanelProps) {
   const [sortOption, setSortOption] = useState<SortOption>("recommended");
   const sortedProducts = sortProducts(products, sortOption);
+  const isNotInstalled = selectedValue === NONE_PRODUCT_ID;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-6">
+    <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-2xl">{EQUIPMENT_ICONS[name]}</span>
@@ -72,7 +79,7 @@ export default function ProductPanel({
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value as SortOption)}
-            className="rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700"
+            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 transition focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
           >
             {SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -83,14 +90,23 @@ export default function ProductPanel({
         </label>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
-        <ProductCard
-          icon="🚫"
-          name="설치 안 함"
-          description="이 설비를 설치하지 않습니다"
-          selected={selectedValue === NONE_PRODUCT_ID}
-          onClick={() => onSelect(NONE_PRODUCT_ID)}
+      <label
+        className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition ${
+          isNotInstalled
+            ? "border-blue-600 bg-blue-50/60 text-blue-800 shadow-sm"
+            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={isNotInstalled}
+          onChange={() => onSelect(isNotInstalled ? null : NONE_PRODUCT_ID)}
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-600"
         />
+        <span className="font-medium">이 설비 설치 안 함</span>
+      </label>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {sortedProducts.map((product) => (
           <ProductCard
             key={product.id}
