@@ -122,6 +122,10 @@ type FloorPlanCanvasProps = {
   selectedStructureId: string | null;
   recentlyCreatedStructureId: string | null;
   selectedPartitionId: string | null;
+  /** False while 소방설비 자동 배치 mode (see app/page.tsx) is OFF — every
+   * placed equipment marker is hidden from the canvas (the underlying data
+   * is untouched, so turning the mode back on doesn't lose anything). */
+  showEquipment: boolean;
   extinguisherPlacements: ExtinguisherPlacement[];
   heatDetectors: HeatDetector[];
   selectedHeatDetectorId: string | null;
@@ -167,6 +171,7 @@ export default function FloorPlanCanvas({
   selectedStructureId,
   recentlyCreatedStructureId,
   selectedPartitionId,
+  showEquipment,
   extinguisherPlacements,
   heatDetectors,
   selectedHeatDetectorId,
@@ -698,83 +703,87 @@ export default function FloorPlanCanvas({
           />
           {regularStructures.map(renderStructure)}
         {doorStructures.map(renderStructure)}
-        {extinguisherPlacements.map((placement) => (
-          <Group key={placement.id} x={placement.x} y={placement.y} listening={false}>
-            <Circle radius={10} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />
-            <Text
-              text="소"
-              width={20}
-              height={20}
-              offsetX={10}
-              offsetY={10}
-              align="center"
-              verticalAlign="middle"
-              fontSize={10}
-              fill="#ffffff"
-            />
-          </Group>
-        ))}
-        {heatDetectors.map((detector) => {
-          const room = structures.find((s) => s.id === detector.roomId);
-          const roomLabel =
-            ROOM_TYPE_DEFAULTS[room?.roomType ?? DEFAULT_ROOM_TYPE].label;
-          return (
-            <HeatDetectorShape
-              key={detector.id}
-              detector={detector}
-              roomLabel={roomLabel}
-              isSelected={detector.id === selectedHeatDetectorId}
-              onToggleSelect={onSelectHeatDetector}
-            />
-          );
-        })}
-        {exitLights.map((light) => {
-          const owner = structures.find((s) => s.id === light.structureId);
-          const structureLabel = owner ? getStructureLabel(owner) : "구조물";
-          return (
-            <ExitLightShape
-              key={light.id}
-              light={light}
-              structureLabel={structureLabel}
-              isSelected={light.id === selectedExitLightId}
-              onToggleSelect={onSelectExitLight}
-            />
-          );
-        })}
-        {smokeDetectors.map((detector) => {
-          const owner = structures.find((s) => s.id === detector.structureId);
-          const structureLabel = owner ? getStructureLabel(owner) : "구조물";
-          return (
-            <SmokeDetectorShape
-              key={detector.id}
-              detector={detector}
-              structureLabel={structureLabel}
-              isSelected={detector.id === selectedSmokeDetectorId}
-              onToggleSelect={onSelectSmokeDetector}
-            />
-          );
-        })}
-        {sprinklerHeads.map((head) => (
-          <SprinklerHeadShape
-            key={head.id}
-            head={head}
-            isSelected={head.id === selectedSprinklerHeadId}
-            onToggleSelect={onSelectSprinklerHead}
-          />
-        ))}
-        {hydrantPlacements.map((hydrant) => {
-          const owner = structures.find((s) => s.id === hydrant.structureId);
-          const structureLabel = owner ? getStructureLabel(owner) : "구조물";
-          return (
-            <HydrantShape
-              key={hydrant.id}
-              hydrant={hydrant}
-              structureLabel={structureLabel}
-              isSelected={hydrant.id === selectedHydrantId}
-              onToggleSelect={onSelectHydrant}
-            />
-          );
-        })}
+        {showEquipment && (
+          <Fragment>
+            {extinguisherPlacements.map((placement) => (
+              <Group key={placement.id} x={placement.x} y={placement.y} listening={false}>
+                <Circle radius={10} fill="#dc2626" stroke="#7f1d1d" strokeWidth={1} />
+                <Text
+                  text="소"
+                  width={20}
+                  height={20}
+                  offsetX={10}
+                  offsetY={10}
+                  align="center"
+                  verticalAlign="middle"
+                  fontSize={10}
+                  fill="#ffffff"
+                />
+              </Group>
+            ))}
+            {heatDetectors.map((detector) => {
+              const room = structures.find((s) => s.id === detector.roomId);
+              const roomLabel =
+                ROOM_TYPE_DEFAULTS[room?.roomType ?? DEFAULT_ROOM_TYPE].label;
+              return (
+                <HeatDetectorShape
+                  key={detector.id}
+                  detector={detector}
+                  roomLabel={roomLabel}
+                  isSelected={detector.id === selectedHeatDetectorId}
+                  onToggleSelect={onSelectHeatDetector}
+                />
+              );
+            })}
+            {exitLights.map((light) => {
+              const owner = structures.find((s) => s.id === light.structureId);
+              const structureLabel = owner ? getStructureLabel(owner) : "구조물";
+              return (
+                <ExitLightShape
+                  key={light.id}
+                  light={light}
+                  structureLabel={structureLabel}
+                  isSelected={light.id === selectedExitLightId}
+                  onToggleSelect={onSelectExitLight}
+                />
+              );
+            })}
+            {smokeDetectors.map((detector) => {
+              const owner = structures.find((s) => s.id === detector.structureId);
+              const structureLabel = owner ? getStructureLabel(owner) : "구조물";
+              return (
+                <SmokeDetectorShape
+                  key={detector.id}
+                  detector={detector}
+                  structureLabel={structureLabel}
+                  isSelected={detector.id === selectedSmokeDetectorId}
+                  onToggleSelect={onSelectSmokeDetector}
+                />
+              );
+            })}
+            {sprinklerHeads.map((head) => (
+              <SprinklerHeadShape
+                key={head.id}
+                head={head}
+                isSelected={head.id === selectedSprinklerHeadId}
+                onToggleSelect={onSelectSprinklerHead}
+              />
+            ))}
+            {hydrantPlacements.map((hydrant) => {
+              const owner = structures.find((s) => s.id === hydrant.structureId);
+              const structureLabel = owner ? getStructureLabel(owner) : "구조물";
+              return (
+                <HydrantShape
+                  key={hydrant.id}
+                  hydrant={hydrant}
+                  structureLabel={structureLabel}
+                  isSelected={hydrant.id === selectedHydrantId}
+                  onToggleSelect={onSelectHydrant}
+                />
+              );
+            })}
+          </Fragment>
+        )}
         {drawRect && (
           <Rect
             x={drawRect.x}

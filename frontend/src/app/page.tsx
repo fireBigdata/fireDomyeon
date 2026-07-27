@@ -88,6 +88,23 @@ export default function Home() {
   // components/canvas/FloorPlanCanvas.tsx + lib/evacuationRoute.ts).
   const [evacuationRouteMode, setEvacuationRouteMode] = useState(false);
 
+  // 소방설비 자동 배치 ON/OFF (see AutoPlacementToggle). While ON, every
+  // structure/출입구 add·move·edit·delete and every floor add/복제 re-runs
+  // placement for all 6 equipment types on the current floor (via
+  // autoPlaceVersion below). While OFF, none of it is shown on the canvas
+  // (FloorPlanCanvas's showEquipment prop) — the underlying placement data
+  // is left alone either way, so toggling back ON doesn't lose anything.
+  const [autoPlacementEnabled, setAutoPlacementEnabled] = useState(true);
+  // Bumped by every structure/floor mutation that should trigger a
+  // re-placement. A plain counter (rather than calling the 6 autoPlace
+  // functions directly at each call site) so the actual placement always
+  // runs from an effect *after* the triggering state update has committed —
+  // calling it inline would still close over the pre-update `currentFloor`.
+  const [autoPlaceVersion, setAutoPlaceVersion] = useState(0);
+  const bumpAutoPlaceVersion = useCallback(() => {
+    setAutoPlaceVersion((v) => v + 1);
+  }, []);
+
   // 계단(stairs) tooltip info: how many floors to 1F, and how many floors up
   // to the rooftop (one above the highest ground floor). Both derived from
   // the current floor's position in state.floors relative to groundMarkerIndex
@@ -127,7 +144,118 @@ export default function Home() {
   ) => {
     addStructure(type, rect, roomType, entranceType, entranceSwingDirection);
     setPendingCategory(null);
+    bumpAutoPlaceVersion();
   };
+
+  // Wrap the structure/floor mutations that 소방설비 자동 배치 should react to
+  // (add/move/edit/delete a structure or 출입구, add/복제 a floor) so each one
+  // also bumps autoPlaceVersion — see its declaration above for why the
+  // actual re-placement happens from an effect instead of inline here.
+  const handleUpdateStructure = useCallback(
+    (id: string, changes: Parameters<typeof updateStructure>[1]) => {
+      updateStructure(id, changes);
+      bumpAutoPlaceVersion();
+    },
+    [updateStructure, bumpAutoPlaceVersion]
+  );
+
+  const handleRemoveStructure = useCallback(
+    (id: string) => {
+      removeStructure(id);
+      bumpAutoPlaceVersion();
+    },
+    [removeStructure, bumpAutoPlaceVersion]
+  );
+
+  const handleAddFloor = useCallback(() => {
+    addFloor();
+    bumpAutoPlaceVersion();
+  }, [addFloor, bumpAutoPlaceVersion]);
+
+  const handleCloneCurrentFloor = useCallback(() => {
+    cloneCurrentFloor();
+    bumpAutoPlaceVersion();
+  }, [cloneCurrentFloor, bumpAutoPlaceVersion]);
+
+  // Room/entrance-type and partition-layout edits also feed the placement
+  // algorithms (room type -> detector coverage, sprinkler hazard class ->
+  // sprinkler count, partition layout -> per-room counts), so they bump
+  // autoPlaceVersion too. resizePartition is deliberately excluded: it fires
+  // continuously while a partition divider is being dragged, and re-running
+  // all 6 placements on every drag tick would be far too expensive.
+  const handleRoomTypeChange = useCallback(
+    (id: string, roomType: Parameters<typeof setRoomType>[1]) => {
+      setRoomType(id, roomType);
+      bumpAutoPlaceVersion();
+    },
+    [setRoomType, bumpAutoPlaceVersion]
+  );
+
+  const handleSprinklerHazardChange = useCallback(
+    (id: string, hazard: Parameters<typeof setSprinklerHazard>[1]) => {
+      setSprinklerHazard(id, hazard);
+      bumpAutoPlaceVersion();
+    },
+    [setSprinklerHazard, bumpAutoPlaceVersion]
+  );
+
+  const handleEntranceTypeChange = useCallback(
+    (id: string, entranceType: Parameters<typeof setEntranceType>[1]) => {
+      setEntranceType(id, entranceType);
+      bumpAutoPlaceVersion();
+    },
+    [setEntranceType, bumpAutoPlaceVersion]
+  );
+
+  const handleEntranceSwingDirectionChange = useCallback(
+    (id: string, direction: Parameters<typeof setEntranceSwingDirection>[1]) => {
+      setEntranceSwingDirection(id, direction);
+      bumpAutoPlaceVersion();
+    },
+    [setEntranceSwingDirection, bumpAutoPlaceVersion]
+  );
+
+  const handleSplitPartition = useCallback(
+    (structureId: string, leafId: string, direction: Parameters<typeof splitPartition>[2]) => {
+      splitPartition(structureId, leafId, direction);
+      bumpAutoPlaceVersion();
+    },
+    [splitPartition, bumpAutoPlaceVersion]
+  );
+
+  const handleMergePartition = useCallback(
+    (structureId: string, leafId: string) => {
+      mergePartition(structureId, leafId);
+      bumpAutoPlaceVersion();
+    },
+    [mergePartition, bumpAutoPlaceVersion]
+  );
+
+  const handleDeletePartitionRegion = useCallback(
+    (structureId: string, leafId: string) => {
+      deletePartitionRegion(structureId, leafId);
+      bumpAutoPlaceVersion();
+    },
+    [deletePartitionRegion, bumpAutoPlaceVersion]
+  );
+
+  const handleRestorePartitionRegion = useCallback(
+    (structureId: string, emptyId: string) => {
+      restorePartitionRegion(structureId, emptyId);
+      bumpAutoPlaceVersion();
+    },
+    [restorePartitionRegion, bumpAutoPlaceVersion]
+  );
+
+  const handleToggleAutoPlacement = useCallback(() => {
+    setAutoPlacementEnabled((prev) => {
+      const next = !prev;
+      // Turning ON: place equipment for whatever's already drawn on the
+      // current floor right away, instead of waiting for the next edit.
+      if (next) bumpAutoPlaceVersion();
+      return next;
+    });
+  }, [bumpAutoPlaceVersion]);
 
   const handleResetCurrentFloor = () => {
     setPendingCategory(null);
@@ -214,14 +342,14 @@ export default function Home() {
               "이 구조물을 삭제하시겠습니까? 연결된 구획, 감지기, 소화기도 함께 삭제됩니다."
             )
           ) {
-            removeStructure(state.selectedStructureId);
+            handleRemoveStructure(state.selectedStructureId);
           }
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [state.selectedStructureId, removeStructure, handleArmStructure]);
+  }, [state.selectedStructureId, handleRemoveStructure, handleArmStructure]);
 
   const saveFloorPlan = useSaveFloorPlan();
 
@@ -312,6 +440,20 @@ export default function Home() {
     autoPlaceHydrants();
   };
 
+  // 소방설비 자동 배치 ON: re-run placement for every equipment type whenever
+  // autoPlaceVersion is bumped (structure/출입구 added/moved/edited/deleted,
+  // a floor added/복제, or the toggle just switched on). Runs from an effect
+  // rather than at each call site so it always sees the post-update
+  // `currentFloor` — autoPlaceVersion and the structure/floor change that
+  // triggered it are set together, so React commits both in the same
+  // render before this effect (and the fresh autoPlace* closures it reads)
+  // runs. Skipped on mount (autoPlaceVersion starts at 0).
+  useEffect(() => {
+    if (autoPlaceVersion === 0 || !autoPlacementEnabled) return;
+    handleAutoPlaceAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlaceVersion]);
+
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-gray-50">
       {(showSetupModal || showBuildingInfoModal) && (
@@ -358,8 +500,8 @@ export default function Home() {
         groundMarkerIndex={state.groundMarkerIndex}
         currentFloorId={state.currentFloorId}
         onSelect={selectFloor}
-        onAdd={addFloor}
-        onClone={cloneCurrentFloor}
+        onAdd={handleAddFloor}
+        onClone={handleCloneCurrentFloor}
         onRemove={removeFloor}
         onMoveItem={moveFloorBarItem}
         onResetFloor={handleResetCurrentFloor}
@@ -393,7 +535,8 @@ export default function Home() {
           hydrantError={hydrantError}
           onAutoPlaceHydrants={autoPlaceHydrants}
           hydrantSummary={hydrantSummary}
-          onAutoPlaceAll={handleAutoPlaceAll}
+          autoPlacementEnabled={autoPlacementEnabled}
+          onToggleAutoPlacement={handleToggleAutoPlacement}
         />
 
         <main className="relative flex flex-1 flex-col items-center gap-4 overflow-auto p-6">
@@ -409,6 +552,7 @@ export default function Home() {
             selectedStructureId={state.selectedStructureId}
             recentlyCreatedStructureId={state.recentlyCreatedStructureId}
             selectedPartitionId={state.selectedPartitionId}
+            showEquipment={autoPlacementEnabled}
             extinguisherPlacements={currentFloor.extinguisherPlacements}
             heatDetectors={currentFloor.heatDetectors}
             selectedHeatDetectorId={state.selectedHeatDetectorId}
@@ -428,7 +572,7 @@ export default function Home() {
             onSelectSmokeDetector={selectSmokeDetector}
             onSelectSprinklerHead={selectSprinklerHead}
             onSelectHydrant={selectHydrant}
-            onChange={updateStructure}
+            onChange={handleUpdateStructure}
             pendingCategory={pendingCategory}
             onConfirmStructure={handleConfirmStructure}
             onCancelPendingStructure={() => setPendingCategory(null)}
@@ -463,17 +607,17 @@ export default function Home() {
             buildingSiteAreaSqm: state.buildingSiteAreaSqm,
           }}
           onBuildingScaleChange={setBuildingScale}
-          onChange={updateStructure}
-          onRoomTypeChange={setRoomType}
-          onSprinklerHazardChange={setSprinklerHazard}
-          onEntranceTypeChange={setEntranceType}
-          onEntranceSwingDirectionChange={setEntranceSwingDirection}
-          onSplitPartition={splitPartition}
+          onChange={handleUpdateStructure}
+          onRoomTypeChange={handleRoomTypeChange}
+          onSprinklerHazardChange={handleSprinklerHazardChange}
+          onEntranceTypeChange={handleEntranceTypeChange}
+          onEntranceSwingDirectionChange={handleEntranceSwingDirectionChange}
+          onSplitPartition={handleSplitPartition}
           onResetPartitions={resetPartitions}
-          onMergePartition={mergePartition}
-          onDeletePartitionRegion={deletePartitionRegion}
-          onRestorePartitionRegion={restorePartitionRegion}
-          onDeleteStructure={removeStructure}
+          onMergePartition={handleMergePartition}
+          onDeletePartitionRegion={handleDeletePartitionRegion}
+          onRestorePartitionRegion={handleRestorePartitionRegion}
+          onDeleteStructure={handleRemoveStructure}
         />
       </div>
     </div>

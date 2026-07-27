@@ -10,7 +10,7 @@ import type { SprinklerSummary } from "@/hooks/useSprinklerPlacement";
 import type { HydrantSummary } from "@/hooks/useHydrantPlacement";
 import StructureToolbar, { type StructureCategory } from "@/components/panels/StructureToolbar";
 import EvacuationRoutePanel from "@/components/panels/EvacuationRoutePanel";
-import AutoPlaceAllButton from "@/components/panels/AutoPlaceAllButton";
+import AutoPlacementToggle from "@/components/panels/AutoPlacementToggle";
 import ExtinguisherPanel from "@/components/panels/ExtinguisherPanel";
 import HeatDetectorPanel from "@/components/panels/HeatDetectorPanel";
 import ExitLightPanel from "@/components/panels/ExitLightPanel";
@@ -45,7 +45,8 @@ type LeftPanelProps = {
   hydrantError: string | null;
   onAutoPlaceHydrants: () => void;
   hydrantSummary: HydrantSummary | null;
-  onAutoPlaceAll: () => void;
+  autoPlacementEnabled: boolean;
+  onToggleAutoPlacement: () => void;
 };
 
 export default function LeftPanel({
@@ -75,13 +76,14 @@ export default function LeftPanel({
   hydrantError,
   onAutoPlaceHydrants,
   hydrantSummary,
-  onAutoPlaceAll,
+  autoPlacementEnabled,
+  onToggleAutoPlacement,
 }: LeftPanelProps) {
   return (
     <aside className="flex w-56 flex-col gap-6 overflow-y-auto border-r border-gray-200 bg-white p-4">
       <StructureToolbar pendingCategory={pendingCategory} onArm={onArmStructure} />
       <EvacuationRoutePanel isActive={evacuationRouteMode} onToggle={onToggleEvacuationRoute} />
-      <AutoPlaceAllButton onAutoPlaceAll={onAutoPlaceAll} />
+      <AutoPlacementToggle isEnabled={autoPlacementEnabled} onToggle={onToggleAutoPlacement} />
       <ExtinguisherPanel
         facilityType={facilityType}
         selectedProduct={selectedExtinguisherProduct}
