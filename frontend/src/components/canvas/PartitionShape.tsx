@@ -90,6 +90,11 @@ export default function PartitionShape({
 
   const { id, direction, ratio, children } = node;
   const isVertical = direction === "vertical";
+  // When one side of this split was deleted, this divider isn't an interior
+  // wall between two rooms anymore — it's the actual outer edge of the
+  // remaining L/U-shaped room (see the "empty" branch above), so it should
+  // read as a solid boundary line rather than a dashed internal division.
+  const isOuterEdge = children[0].kind === "empty" || children[1].kind === "empty";
 
   const firstBox: Box = isVertical
     ? { ...box, width: box.width * ratio }
@@ -127,6 +132,7 @@ export default function PartitionShape({
         points={isVertical ? [0, 0, 0, box.height] : [0, 0, box.width, 0]}
         stroke="#475569"
         strokeWidth={2}
+        dash={isOuterEdge ? undefined : [6, 4]}
         hitStrokeWidth={12}
         draggable
         onMouseDown={(e) => {

@@ -242,6 +242,7 @@ export default function StructureShape({
           verticalAlign="middle"
           fontSize={13}
           fill="#111827"
+          opacity={0.45}
           listening={false}
         />
       </Group>
