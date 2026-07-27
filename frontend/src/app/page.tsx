@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFloorPlanState } from "@/hooks/useFloorPlanState";
 import { useSaveFloorPlan } from "@/hooks/useSaveFloorPlan";
+import { summarizeFloorPlan } from "@/hooks/useFloorPlanSummary";
 import { useExtinguisherPlacement } from "@/hooks/useExtinguisherPlacement";
 import { useSelectedEquipmentProduct } from "@/hooks/useSelectedEquipmentProduct";
 import { useHeatDetectorPlacement } from "@/hooks/useHeatDetectorPlacement";
@@ -12,11 +14,15 @@ import { useSprinklerPlacement } from "@/hooks/useSprinklerPlacement";
 import { useHydrantPlacement } from "@/hooks/useHydrantPlacement";
 import { saveFloorPlanStateToStorage } from "@/lib/floorPlanStorage";
 import { isEntranceStructure } from "@/lib/structureArea";
+import { HEAT_DETECTOR_TYPE_LABELS } from "@/constants/heatDetectorTypes";
+import { EXIT_LIGHT_CATEGORY_DEFAULTS, EXIT_LIGHT_CATEGORY_ORDER } from "@/constants/exitLight";
+import { HeatDetectorType } from "@/types/heatDetector";
 import TopBar from "@/components/layout/TopBar";
 import FloorBar from "@/components/layout/FloorBar";
 import LeftPanel from "@/components/layout/LeftPanel";
 import RightPanel from "@/components/layout/RightPanel";
 import InitialSetupModal from "@/components/panels/InitialSetupModal";
+import EquipmentSummaryModal from "@/components/panels/EquipmentSummaryModal";
 import DynamicFloorPlanCanvas from "@/components/canvas/DynamicFloorPlanCanvas";
 import type { StructureCategory } from "@/components/panels/StructureToolbar";
 import type { EntranceSwingDirection, EntranceType, RoomType, StructureType } from "@/types/floorplan";
@@ -68,6 +74,12 @@ export default function Home() {
     selectHydrant,
     setHydrantPlacements,
   } = useFloorPlanState();
+
+  const router = useRouter();
+  // Derived straight from the live `state`, not the localStorage-backed
+  // useFloorPlanSummary hook — that hook only updates via the "storage"
+  // event, which never fires for writes made from this same tab.
+  const floorPlanSummary = useMemo(() => summarizeFloorPlan(state), [state]);
 
   const [pendingCategory, setPendingCategory] = useState<StructureCategory | null>(null);
 
@@ -126,6 +138,56 @@ export default function Home() {
     setPendingCategory(null);
     resetAll();
   };
+
+  // 설비 선택 화면으로 넘어가기 전에 현재 도면 기준 자동 배치된 설비 수량을
+  // 팝업으로 먼저 보여줘서, 사용자가 "몇 개가 필요한지" 인지한 상태로 이동하게 한다.
+  const [showEquipmentSummaryModal, setShowEquipmentSummaryModal] = useState(false);
+
+  const equipmentSummaryItems = useMemo(() => {
+    const items: { icon: string; label: string; count: number }[] = [];
+    if (floorPlanSummary.totalExtinguisherCount > 0) {
+      items.push({ icon: "🧯", label: "소화기", count: floorPlanSummary.totalExtinguisherCount });
+    }
+    const heatDetectorIcons: Record<HeatDetectorType, string> = {
+      [HeatDetectorType.DIFFERENTIAL]: "🌡️",
+      [HeatDetectorType.FIXED_TEMPERATURE]: "🔥",
+    };
+    for (const type of [HeatDetectorType.DIFFERENTIAL, HeatDetectorType.FIXED_TEMPERATURE]) {
+      const count = floorPlanSummary.totalHeatDetectorCountsByType[type];
+      if (count > 0) {
+        items.push({
+          icon: heatDetectorIcons[type],
+          label: `${HEAT_DETECTOR_TYPE_LABELS[type]}열감지기`,
+          count,
+        });
+      }
+    }
+    if (floorPlanSummary.totalSmokeDetectorCount > 0) {
+      items.push({ icon: "💨", label: "연기감지기", count: floorPlanSummary.totalSmokeDetectorCount });
+    }
+    const exitLightIcons: Record<string, string> = {
+      EXIT: "🚪",
+      CORRIDOR: "🏃",
+      STAIRS: "🪜",
+    };
+    for (const category of EXIT_LIGHT_CATEGORY_ORDER) {
+      const count = floorPlanSummary.totalExitLightCountsByCategory[category];
+      if (count > 0) {
+        items.push({
+          icon: exitLightIcons[category] ?? "🚪",
+          label: EXIT_LIGHT_CATEGORY_DEFAULTS[category].label,
+          count,
+        });
+      }
+    }
+    if (floorPlanSummary.totalSprinklerHeadCount > 0) {
+      items.push({ icon: "💧", label: "스프링클러", count: floorPlanSummary.totalSprinklerHeadCount });
+    }
+    if (floorPlanSummary.totalHydrantCount > 0) {
+      items.push({ icon: "🚒", label: "옥내소화전", count: floorPlanSummary.totalHydrantCount });
+    }
+    return items;
+  }, [floorPlanSummary]);
 
   // 전역 단축키: S(구조물 추가), E(출입구 추가), Delete/Backspace(선택된 구조물 삭제).
   // 입력창에 포커스가 있거나 조합키(Ctrl/Alt/Meta)가 눌려있으면 무시한다.
@@ -271,6 +333,17 @@ export default function Home() {
         />
       )}
 
+      {showEquipmentSummaryModal && (
+        <EquipmentSummaryModal
+          items={equipmentSummaryItems}
+          onClose={() => setShowEquipmentSummaryModal(false)}
+          onConfirm={() => {
+            setShowEquipmentSummaryModal(false);
+            router.push("/equipment-selection");
+          }}
+        />
+      )}
+
       <TopBar
         name={state.name}
         onNameChange={setName}
@@ -323,7 +396,7 @@ export default function Home() {
           onAutoPlaceAll={handleAutoPlaceAll}
         />
 
-        <main className="flex flex-1 flex-col items-center gap-4 overflow-auto p-6">
+        <main className="relative flex flex-1 flex-col items-center gap-4 overflow-auto p-6">
           <DynamicFloorPlanCanvas
             structures={currentFloor.structures}
             scale={state.scale}
@@ -360,6 +433,17 @@ export default function Home() {
             onConfirmStructure={handleConfirmStructure}
             onCancelPendingStructure={() => setPendingCategory(null)}
           />
+
+          <div className="pointer-events-none sticky bottom-0 left-0 z-10 flex w-full justify-end self-stretch p-2">
+            <button
+              type="button"
+              onClick={() => setShowEquipmentSummaryModal(true)}
+              className="pointer-events-auto flex items-center gap-1.5 rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-shadow"
+            >
+              설비 선택으로 이동
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
         </main>
 
         <RightPanel

@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 type TopBarProps = {
   name: string;
   onNameChange: (name: string) => void;
@@ -40,12 +38,6 @@ export default function TopBar({
         >
           건물 정보
         </button>
-        <Link
-          href="/equipment-selection"
-          className="rounded-md border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          설비 선택으로 이동
-        </Link>
         <button
           type="button"
           onClick={handleResetAll}

@@ -35,12 +35,17 @@ export default function ProductCard({
         type="button"
         onClick={onClick}
         aria-pressed={selected}
-        className={`flex w-full flex-col items-start gap-2 rounded-lg border p-4 text-left transition ${
+        className={`relative flex w-full scale-100 flex-col items-start gap-2 rounded-lg border-2 p-4 text-left transition ${
           selected
-            ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
-            : "border-gray-200 bg-white hover:border-gray-300"
+            ? "border-blue-600 bg-blue-50 shadow-md ring-2 ring-blue-500 ring-offset-2"
+            : "border-transparent bg-white ring-1 ring-gray-200 hover:ring-gray-300"
         }`}
       >
+        {selected && (
+          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-sm">
+            ✓
+          </span>
+        )}
         {image ? (
           <div className="relative aspect-square w-full overflow-hidden rounded-md bg-gray-100">
             <Image src={image} alt={name} fill className="object-cover" />
@@ -50,13 +55,18 @@ export default function ProductCard({
             <span className="text-5xl">{icon}</span>
           </div>
         )}
-        <span className="font-medium text-gray-900">{name}</span>
+        <span className={`font-medium ${selected ? "text-blue-800" : "text-gray-900"}`}>
+          {name}
+        </span>
         {price != null && (
           <span className="text-sm font-semibold text-gray-800">
             {price.toLocaleString()}원
           </span>
         )}
         <span className="text-sm text-gray-500">{description}</span>
+        {selected && (
+          <span className="mt-0.5 text-xs font-semibold text-blue-600">선택됨</span>
+        )}
       </button>
 
       {selected && onQuantityChange && (

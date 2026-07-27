@@ -78,7 +78,11 @@ function countHeatDetectorsByType(
   return counts;
 }
 
-function summarize(floorPlan: FloorPlanState): FloorPlanSummary {
+/** Exported so page.tsx can derive a summary straight from its live `state`
+ * — the useFloorPlanSummary hook below reads a localStorage snapshot instead,
+ * which only updates on the OTHER tab/page (same-tab writes don't fire the
+ * "storage" event), so it's the wrong source for the page that owns `state`. */
+export function summarizeFloorPlan(floorPlan: FloorPlanState): FloorPlanSummary {
   const scale = floorPlan.scale ?? 1;
 
   const byFloor = floorPlan.floors.map((floor) => ({
@@ -172,6 +176,6 @@ export function useFloorPlanSummary(): FloorPlanSummary | null {
     if (!Array.isArray(floorPlan?.floors) || floorPlan.floors.length === 0) {
       return null;
     }
-    return summarize(floorPlan);
+    return summarizeFloorPlan(floorPlan);
   }, [raw]);
 }
