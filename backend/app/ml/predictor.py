@@ -24,18 +24,19 @@ TARGETS = [
     "발신기",
 ]
 
-# Only these 7 have no drawing-based auto-placement logic in this app yet
+# Only these 8 have no drawing-based auto-placement logic in this app yet
 # (감지기/소화전 are already computed from NFTC formulas elsewhere and are
 # intentionally excluded here) — maps the model's training-data column name
-# to this app's EquipmentName literal. 댐퍼/창문폐쇄 are new TARGETS as of the
-# 2026-07-24 fire-equipment-predictor retrain but have no corresponding
-# EquipmentName in this app yet, so they're read into TARGETS (to keep this
-# list matching the model's output order) but left out of this mapping and
-# therefore out of the API response until the app gains those equipment types.
+# to this app's EquipmentName literal. 창문폐쇄 is also a new TARGET as of the
+# 2026-07-24 fire-equipment-predictor retrain but has no corresponding
+# EquipmentName in this app yet, so it's read into TARGETS (to keep this list
+# matching the model's output order) but left out of this mapping and
+# therefore out of the API response until the app gains that equipment type.
 TARGET_TO_EQUIPMENT_NAME = {
     "예비펌프": "예비펌프",
     "주펌프": "주펌프",
     "충압펌프": "충압펌프",
+    "댐퍼": "댐퍼",
     "급기휀": "급기팬",
     "배기휀": "배기팬",
     "자동폐쇄": "자동폐쇄장치",
@@ -52,7 +53,7 @@ def predict_equipment_counts(
     total_floor_area_sqm: float,
     site_area_sqm: float,
 ) -> dict[str, float]:
-    """Predicts installed counts for the 7 equipment types this app has no
+    """Predicts installed counts for the 8 equipment types this app has no
     placement logic for, from building-scale inputs. Reference-only estimate:
     the underlying model was trained on 110 rows (102 matched buildings, some
     joined into extra rows by duplicate filenames — see fire-equipment-predictor's

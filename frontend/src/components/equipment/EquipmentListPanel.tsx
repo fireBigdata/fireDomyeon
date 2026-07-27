@@ -10,7 +10,7 @@ import type {
 type EquipmentListPanelProps = {
   equipmentList: EquipmentName[];
   selection: EquipmentSelectionState;
-  activeEquipment: EquipmentName;
+  activeEquipment: EquipmentName | null;
   onSelectEquipment: (name: EquipmentName) => void;
 };
 
@@ -21,7 +21,7 @@ export default function EquipmentListPanel({
   onSelectEquipment,
 }: EquipmentListPanelProps) {
   return (
-    <nav className="flex w-64 flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-gray-200 bg-white p-3">
+    <nav className="flex w-56 flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-gray-200 bg-white p-3">
       {equipmentList.map((name) => {
         const value = selection[name];
         const selectedProduct =

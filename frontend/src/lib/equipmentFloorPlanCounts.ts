@@ -16,6 +16,7 @@ export const ML_ESTIMATED_EQUIPMENT_NAMES: ReadonlySet<EquipmentName> = new Set(
   "예비펌프",
   "주펌프",
   "충압펌프",
+  "댐퍼",
   "급기팬",
   "배기팬",
   "자동폐쇄장치",

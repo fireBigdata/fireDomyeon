@@ -30,19 +30,6 @@ function createInitialSelectionState(): EquipmentSelectionState {
   }, {} as EquipmentSelectionState);
 }
 
-function createInitialQuantityState(
-  selection: EquipmentSelectionState,
-  floorPlanSummary: FloorPlanSummary | null,
-  mlPrediction?: Record<string, number> | null
-): EquipmentQuantityState {
-  return EQUIPMENT_LIST.reduce((state, name) => {
-    state[name] = selection[name]
-      ? getFloorPlanInstalledCount(name, floorPlanSummary, mlPrediction)
-      : 0;
-    return state;
-  }, {} as EquipmentQuantityState);
-}
-
 export function useEquipmentSelection(
   floorPlanSummary: FloorPlanSummary | null = null,
   mlPrediction?: Record<string, number> | null
@@ -50,30 +37,49 @@ export function useEquipmentSelection(
   const [selection, setSelection] = useState<EquipmentSelectionState>(
     createInitialSelectionState
   );
-  const [quantities, setQuantities] = useState<EquipmentQuantityState>(() =>
-    createInitialQuantityState(selection, floorPlanSummary, mlPrediction)
-  );
+
+  // Quantities the user has typed in directly (or that were locked in when
+  // they picked a product) — anything NOT in here just follows the current
+  // floor-plan/ML-derived recommendation live, so it can't go stale the way
+  // a one-time-computed useState would (floorPlanSummary/mlPrediction aren't
+  // ready yet on the very first render, since they settle a moment after
+  // mount from localStorage/an API call).
+  const [manualQuantityOverrides, setManualQuantityOverrides] = useState<
+    Partial<Record<EquipmentName, number>>
+  >({});
+
+  const quantities = useMemo<EquipmentQuantityState>(() => {
+    return EQUIPMENT_LIST.reduce((state, name) => {
+      const value = selection[name];
+      if (value === null || value === NONE_PRODUCT_ID) {
+        state[name] = 0;
+      } else if (name in manualQuantityOverrides) {
+        state[name] = manualQuantityOverrides[name]!;
+      } else {
+        state[name] = getFloorPlanInstalledCount(name, floorPlanSummary, mlPrediction);
+      }
+      return state;
+    }, {} as EquipmentQuantityState);
+  }, [selection, floorPlanSummary, mlPrediction, manualQuantityOverrides]);
 
   const selectProduct = useCallback(
     (equipment: EquipmentName, value: EquipmentSelectionValue) => {
       setSelection((prev) => ({ ...prev, [equipment]: value }));
-      setQuantities((prev) => ({
-        ...prev,
-        [equipment]:
-          value === null || value === NONE_PRODUCT_ID
-            ? 0
-            : getFloorPlanInstalledCount(equipment, floorPlanSummary, mlPrediction),
-      }));
-    },
-    [floorPlanSummary, mlPrediction]
-  );
-
-  const setQuantity = useCallback(
-    (equipment: EquipmentName, quantity: number) => {
-      setQuantities((prev) => ({ ...prev, [equipment]: quantity }));
+      // Picking a (possibly different) product resets this equipment back to
+      // "follow the recommended quantity" — any earlier manual edit no longer applies.
+      setManualQuantityOverrides((prev) => {
+        if (!(equipment in prev)) return prev;
+        const next = { ...prev };
+        delete next[equipment];
+        return next;
+      });
     },
     []
   );
+
+  const setQuantity = useCallback((equipment: EquipmentName, quantity: number) => {
+    setManualQuantityOverrides((prev) => ({ ...prev, [equipment]: quantity }));
+  }, []);
 
   const summary = useMemo<EquipmentSelectionSummary>(() => {
     return EQUIPMENT_LIST.reduce((acc, name) => {

@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { EQUIPMENT_LIST, EQUIPMENT_PRODUCTS } from "@/constants/equipmentProducts";
-import { ML_ESTIMATED_EQUIPMENT_NAMES } from "@/lib/equipmentFloorPlanCounts";
+import { EQUIPMENT_LIST } from "@/constants/equipmentProducts";
+import type { EquipmentName } from "@/types/equipmentSelection";
+import { getFloorPlanInstalledCount } from "@/lib/equipmentFloorPlanCounts";
 import { FACILITY_TYPE_LABELS } from "@/constants/structureDefaults";
 import { useEquipmentSelection } from "@/hooks/useEquipmentSelection";
 import { useFloorPlanSummary } from "@/hooks/useFloorPlanSummary";
 import { useEquipmentCountPrediction } from "@/hooks/useEquipmentCountPrediction";
 import { getFireResistantConstructionCostPerM2 } from "@/lib/facilityRules";
 import { saveEquipmentSelectionToStorage } from "@/lib/equipmentSelectionStorage";
-import EquipmentListPanel from "@/components/equipment/EquipmentListPanel";
-import ProductPanel from "@/components/equipment/ProductPanel";
+import EquipmentCategoryPane from "@/components/equipment/EquipmentCategoryPane";
+import RequiredEquipmentSummaryTable from "@/components/equipment/RequiredEquipmentSummaryTable";
 import FloorPlanSummaryPanel from "@/components/equipment/FloorPlanSummaryPanel";
 import CostSummaryPanel from "@/components/equipment/CostSummaryPanel";
 
@@ -28,6 +29,25 @@ export default function EquipmentSelectionPage() {
     totalCost,
   } = useEquipmentSelection(floorPlanSummary, equipmentCountPrediction.data);
 
+  // Recommended count per equipment from the floor plan/AI estimate alone —
+  // used to split the screen into a "설치 필요" pane and a "개수 0 · 선택장비"
+  // pane, independent of whether the user has picked a product for it yet.
+  const recommendedCounts = useMemo(() => {
+    return EQUIPMENT_LIST.reduce((acc, name) => {
+      acc[name] = getFloorPlanInstalledCount(name, floorPlanSummary, equipmentCountPrediction.data);
+      return acc;
+    }, {} as Record<EquipmentName, number>);
+  }, [floorPlanSummary, equipmentCountPrediction.data]);
+
+  const requiredEquipmentList = useMemo(
+    () => EQUIPMENT_LIST.filter((name) => recommendedCounts[name] > 0),
+    [recommendedCounts]
+  );
+  const uncertainEquipmentList = useMemo(
+    () => EQUIPMENT_LIST.filter((name) => !(recommendedCounts[name] > 0)),
+    [recommendedCounts]
+  );
+
   const fireResistantConstructionCostInfo =
     floorPlanSummary?.isFireResistantStructure
       ? {
@@ -38,7 +58,6 @@ export default function EquipmentSelectionPage() {
         }
       : null;
   const [submitted, setSubmitted] = useState(false);
-  const [activeEquipment, setActiveEquipment] = useState(EQUIPMENT_LIST[0]);
 
   // Lets the floor plan drawing page (a separate route with no shared
   // state/Context) read which 소화기 was selected here — used by its
@@ -51,11 +70,10 @@ export default function EquipmentSelectionPage() {
     (name) => selection[name] !== null
   ).length;
 
-  const mlEstimateNote =
-    ML_ESTIMATED_EQUIPMENT_NAMES.has(activeEquipment) &&
-    equipmentCountPrediction.data?.[activeEquipment] != null
-      ? "AI 추정치가 기본값으로 채워졌습니다 (참고용 — 학습 데이터가 적어 정확도가 낮으니 반드시 직접 확인 후 수정하세요)."
-      : undefined;
+  const requiredEquipmentSummaryItems = useMemo(
+    () => requiredEquipmentList.map((name) => ({ name, count: recommendedCounts[name] })),
+    [requiredEquipmentList, recommendedCounts]
+  );
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
@@ -86,28 +104,29 @@ export default function EquipmentSelectionPage() {
           />
         </div>
       ) : (
-        <div className="flex flex-1 overflow-hidden">
-          <EquipmentListPanel
-            equipmentList={EQUIPMENT_LIST}
-            selection={selection}
-            activeEquipment={activeEquipment}
-            onSelectEquipment={setActiveEquipment}
-          />
-
-          <div className="flex-1 overflow-y-auto">
-            <ProductPanel
-              name={activeEquipment}
-              products={EQUIPMENT_PRODUCTS[activeEquipment]}
-              selectedValue={selection[activeEquipment]}
-              quantity={quantities[activeEquipment]}
-              onSelect={(value) => selectProduct(activeEquipment, value)}
-              onQuantityChange={(quantity) =>
-                setQuantity(activeEquipment, quantity)
-              }
-              mlEstimateNote={mlEstimateNote}
+        <>
+          <RequiredEquipmentSummaryTable items={requiredEquipmentSummaryItems} />
+          <div className="flex flex-1 divide-x divide-gray-200 overflow-hidden">
+            <EquipmentCategoryPane
+              title="설치 필요"
+              equipmentList={requiredEquipmentList}
+              selection={selection}
+              quantities={quantities}
+              onSelectProduct={selectProduct}
+              onQuantityChange={setQuantity}
+              mlPrediction={equipmentCountPrediction.data}
+            />
+            <EquipmentCategoryPane
+              title="개수 0 · 선택장비"
+              equipmentList={uncertainEquipmentList}
+              selection={selection}
+              quantities={quantities}
+              onSelectProduct={selectProduct}
+              onQuantityChange={setQuantity}
+              mlPrediction={equipmentCountPrediction.data}
             />
           </div>
-        </div>
+        </>
       )}
 
       <div className="border-t border-gray-200 bg-white px-4 py-3">
