@@ -19,9 +19,9 @@ type ProductCardProps = {
 };
 
 /**
- * Photo/name/price/선택 버튼만 기본으로 보여주고, 설명은 "상세보기"를 눌러야
- * 펼쳐지는 카드 — 선택 자체는 별도 버튼으로만 일어나므로 설명을 펼쳐 봐도
- * 실수로 선택되지 않는다.
+ * Photo/name/price만 기본으로 보여주고, 설명은 "상세보기"를 눌러야 펼쳐지는
+ * 카드 — 선택은 카드 영역 어디를 눌러도 일어나고, "상세보기"/설치 개수
+ * 입력만 각자의 동작으로 분리되어 있어 선택을 트리거하지 않는다.
  */
 export default function ProductCard({
   icon,
@@ -39,7 +39,17 @@ export default function ProductCard({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl border p-4 transition-all duration-150 ${
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-pressed={selected}
+      className={`flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
         selected
           ? "border-blue-600 bg-blue-50/60 shadow-md"
           : "border-gray-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
@@ -73,22 +83,20 @@ export default function ProductCard({
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={onClick}
-        aria-pressed={selected}
-        className={`rounded-lg px-3 py-1.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-          selected
-            ? "bg-blue-600 text-white hover:bg-blue-700"
-            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+      <span
+        className={`rounded-lg px-3 py-1.5 text-center text-sm font-medium transition ${
+          selected ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
         }`}
       >
         {selected ? "선택됨" : "선택"}
-      </button>
+      </span>
 
       <button
         type="button"
-        onClick={() => setExpanded((prev) => !prev)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpanded((prev) => !prev);
+        }}
         className="flex items-center justify-center gap-1 py-0.5 text-xs text-gray-400 transition hover:text-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
       >
         {expanded ? "상세 접기" : "상세보기"}
@@ -102,7 +110,10 @@ export default function ProductCard({
       )}
 
       {selected && onQuantityChange && (
-        <div className="flex flex-col gap-1 border-t border-blue-100 pt-3">
+        <div
+          className="flex flex-col gap-1 border-t border-blue-100 pt-3"
+          onClick={(e) => e.stopPropagation()}
+        >
           <label className="flex items-center justify-between gap-2 text-sm text-gray-600">
             설치 개수
             <input
