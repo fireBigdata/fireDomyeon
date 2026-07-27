@@ -53,24 +53,38 @@ type StructureShapeProps = {
   evacuationRouteMode?: boolean;
 };
 
-function StairsLines({ width, height }: { width: number; height: number }) {
-  const stepCount = 5;
-  const stepHeight = height / stepCount;
+// Staircase pictogram (ascending bottom-left to top-right, like a typical
+// stairs icon) instead of plain horizontal tread stripes: a single zigzag
+// line alternating a horizontal run then a vertical rise per step. Drawn
+// small and centered (rather than filling the whole structure) and slightly
+// translucent, so it reads as a subtle icon instead of dominating the shape.
+function StairsIcon({ width, height }: { width: number; height: number }) {
+  const ICON_SCALE = 0.45;
+  const iconWidth = width * ICON_SCALE;
+  const iconHeight = height * ICON_SCALE;
+
+  const stepCount = 4;
+  const stepWidth = iconWidth / stepCount;
+  const stepHeight = iconHeight / stepCount;
+
+  const points: number[] = [0, iconHeight];
+  for (let i = 1; i <= stepCount; i++) {
+    points.push(stepWidth * i, iconHeight - stepHeight * (i - 1));
+    points.push(stepWidth * i, iconHeight - stepHeight * i);
+  }
 
   return (
-    <Fragment>
-      {Array.from({ length: stepCount - 1 }, (_, index) => {
-        const y = stepHeight * (index + 1);
-        return (
-          <Line
-            key={y}
-            points={[0, y, width, y]}
-            stroke="#dc2626"
-            strokeWidth={1}
-          />
-        );
-      })}
-    </Fragment>
+    <Line
+      x={(width - iconWidth) / 2}
+      y={(height - iconHeight) / 2}
+      points={points}
+      stroke="#111827"
+      strokeWidth={3}
+      opacity={0.5}
+      lineJoin="miter"
+      lineCap="square"
+      listening={false}
+    />
   );
 }
 
@@ -121,6 +135,7 @@ export default function StructureShape({
   const defaults = STRUCTURE_DEFAULTS[structure.type];
   const isRoom = structure.type === "room";
   const isEntrance = structure.type === "entrance";
+  const isObstacle = structure.type === "obstacle";
   const roomAppearance = isRoom
     ? ROOM_TYPE_DEFAULTS[structure.roomType ?? DEFAULT_ROOM_TYPE]
     : null;
@@ -206,12 +221,51 @@ export default function StructureShape({
         <Rect
           width={structure.width}
           height={structure.height}
-          fill={typeAppearance?.fill ?? defaults.fill}
-          stroke={isSelected ? "#111827" : "#374151"}
+          // 장애물: a slightly translucent fill (rgba, so only the fill —
+          // not the border — gets the transparency) and no border at all,
+          // so it reads as a lighter obstruction marker rather than a room.
+          fill={
+            isObstacle ? "rgba(156, 163, 175, 0.7)" : (typeAppearance?.fill ?? defaults.fill)
+          }
+          stroke={isEntrance || isObstacle ? undefined : isSelected ? "#111827" : "#374151"}
           strokeWidth={isSelected ? 4 : 3}
         />
+        {isEntrance && (
+          // A door opening only reads as a wall break, not a boxed room —
+          // draw just the two short (jamb) edges, along whichever axis is
+          // shorter, and leave the long edges (the opening itself) borderless.
+          <Fragment>
+            {structure.width >= structure.height ? (
+              <Fragment>
+                <Line
+                  points={[0, 0, 0, structure.height]}
+                  stroke={isSelected ? "#111827" : "#374151"}
+                  strokeWidth={isSelected ? 4 : 3}
+                />
+                <Line
+                  points={[structure.width, 0, structure.width, structure.height]}
+                  stroke={isSelected ? "#111827" : "#374151"}
+                  strokeWidth={isSelected ? 4 : 3}
+                />
+              </Fragment>
+            ) : (
+              <Fragment>
+                <Line
+                  points={[0, 0, structure.width, 0]}
+                  stroke={isSelected ? "#111827" : "#374151"}
+                  strokeWidth={isSelected ? 4 : 3}
+                />
+                <Line
+                  points={[0, structure.height, structure.width, structure.height]}
+                  stroke={isSelected ? "#111827" : "#374151"}
+                  strokeWidth={isSelected ? 4 : 3}
+                />
+              </Fragment>
+            )}
+          </Fragment>
+        )}
         {structure.type === "stairs" && (
-          <StairsLines width={structure.width} height={structure.height} />
+          <StairsIcon width={structure.width} height={structure.height} />
         )}
         {isRoom && structure.partitions && (
           <PartitionShape
@@ -234,17 +288,19 @@ export default function StructureShape({
             }
           />
         )}
-        <Text
-          text={typeLabel}
-          width={structure.width}
-          height={structure.height}
-          align="center"
-          verticalAlign="middle"
-          fontSize={13}
-          fill="#111827"
-          opacity={0.45}
-          listening={false}
-        />
+        {!isObstacle && !isEntrance && (
+          <Text
+            text={typeLabel}
+            width={structure.width}
+            height={structure.height}
+            align="center"
+            verticalAlign="middle"
+            fontSize={13}
+            fill="#111827"
+            opacity={0.45}
+            listening={false}
+          />
+        )}
       </Group>
       {isEntrance && structure.entranceSwingDirection && (
         // Sibling of contentRef (not a child of it) so the door-swing arc,
@@ -269,13 +325,6 @@ export default function StructureShape({
           y={structure.height + 4}
           listening={false}
         >
-          <Rect
-            width={Math.max(structure.width, 140)}
-            height={STAIRS_FLOOR_LABEL_HEIGHT}
-            fill="#111827"
-            opacity={0.85}
-            cornerRadius={3}
-          />
           <Text
             text={stairsFloorLabel}
             width={Math.max(structure.width, 140)}
@@ -283,7 +332,8 @@ export default function StructureShape({
             align="center"
             verticalAlign="middle"
             fontSize={10}
-            fill="#ffffff"
+            fontStyle="bold"
+            fill="#111827"
           />
         </Group>
       )}

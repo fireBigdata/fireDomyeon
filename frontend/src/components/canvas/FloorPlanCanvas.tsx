@@ -425,18 +425,28 @@ export default function FloorPlanCanvas({
   }, [awaitingChoice, awaitingSwingChoice, toContentPoint, structures]);
 
   // 열리는 방향 단계: 버튼이 아니라, 마우스가 출입구를 기준으로 좌/우·상/하 중
-  // 어느 쪽에 있는지에 따라 미리보기 부채꼴이 실시간으로 바뀐다.
+  // 어느 쪽에 있는지에 따라 미리보기 부채꼴이 실시간으로 바뀐다. 마우스가 출입구
+  // 자리 위에 있을 때는 방향 없음(미닫이문)으로 미리보기하여 부채꼴을 감춘다 —
+  // 미닫이문은 벽을 따라 슬라이드할 뿐 여닫이처럼 호를 그리며 열리지 않기 때문.
   const handleSwingMouseMove = useCallback(() => {
     if (!drawRect) return;
     const pointer = stageRef.current?.getPointerPosition();
     if (!pointer) return;
     const point = toContentPoint(pointer);
-    setHoveredSwingDirection(detectEntranceSwingDirection(drawRect, point));
+    const isOverEntrance =
+      point.x >= drawRect.x &&
+      point.x <= drawRect.x + drawRect.width &&
+      point.y >= drawRect.y &&
+      point.y <= drawRect.y + drawRect.height;
+    setHoveredSwingDirection(
+      isOverEntrance ? null : detectEntranceSwingDirection(drawRect, point)
+    );
   }, [drawRect, toContentPoint]);
 
-  // 클릭하면 현재 미리보기 중인 방향으로 확정하고, 용도 선택 단계로 넘어간다.
+  // 클릭하면 현재 미리보기 중인 방향(또는 미닫이문의 경우 null)으로 확정하고,
+  // 용도 선택 단계로 넘어간다.
   const handleSwingClick = useCallback(() => {
-    setPendingEntranceSwing(hoveredSwingDirection ?? DEFAULT_ENTRANCE_SWING_DIRECTION);
+    setPendingEntranceSwing(hoveredSwingDirection);
     setAwaitingSwingChoice(false);
     setAwaitingChoice(true);
   }, [hoveredSwingDirection]);

@@ -26,7 +26,7 @@ type RightPanelProps = {
   onEntranceTypeChange: (id: string, entranceType: EntranceType) => void;
   onEntranceSwingDirectionChange: (
     id: string,
-    entranceSwingDirection: EntranceSwingDirection
+    entranceSwingDirection: EntranceSwingDirection | undefined
   ) => void;
   onSplitPartition: (
     structureId: string,

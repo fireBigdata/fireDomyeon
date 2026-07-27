@@ -35,7 +35,18 @@ export function getEntranceSwingGeometry(
   width: number,
   height: number
 ): EntranceSwingGeometry {
-  return GEOMETRY[direction](width, height);
+  const { apexX, apexY, rotation } = GEOMETRY[direction](width, height);
+  // The corner GEOMETRY above picks is on the entrance's short (jamb) edge —
+  // the one whose border is actually drawn now that the long edges (the
+  // opening itself) are borderless (see StructureShape). Re-center the hinge
+  // along that edge instead of pinning it to the edge's corner endpoint, so
+  // the swing visibly starts from the middle of the visible jamb line.
+  const isWidthLonger = width >= height;
+  return {
+    apexX: isWidthLonger ? apexX : width / 2,
+    apexY: isWidthLonger ? height / 2 : apexY,
+    rotation,
+  };
 }
 
 /** Door-leaf length for the swing symbol: the entrance's own wider span

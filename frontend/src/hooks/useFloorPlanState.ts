@@ -419,7 +419,7 @@ export function useFloorPlanState(initial?: FloorPlanState) {
   );
 
   const setEntranceSwingDirection = useCallback(
-    (id: string, entranceSwingDirection: EntranceSwingDirection) => {
+    (id: string, entranceSwingDirection: EntranceSwingDirection | undefined) => {
       updateCurrentFloor((floor) => ({
         ...floor,
         structures: floor.structures.map((structure) =>

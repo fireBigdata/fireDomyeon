@@ -25,8 +25,10 @@ export const STRUCTURE_DEFAULTS: Record<StructureType, StructureDefault> = {
   },
   entrance: {
     label: "출입구",
-    width: 70,
-    height: 25,
+    // 1.3m x 0.3m — PIXELS_PER_METER (lib/area.ts) is 30px/m, so
+    // 1.3 * 30 = 39, 0.3 * 30 = 9.
+    width: 39,
+    height: 9,
     fill: "#dcfce7",
     stroke: "#16a34a",
   },

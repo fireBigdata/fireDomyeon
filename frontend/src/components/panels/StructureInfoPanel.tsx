@@ -10,7 +10,6 @@ import type {
 } from "@/types/floorplan";
 import { DEFAULT_ROOM_TYPE } from "@/constants/roomTypes";
 import { DEFAULT_ENTRANCE_TYPE } from "@/constants/entranceTypes";
-import { DEFAULT_ENTRANCE_SWING_DIRECTION } from "@/constants/entranceSwing";
 import { DEFAULT_SPRINKLER_HAZARD, SPRINKLER_HAZARD_LABELS, SPRINKLER_HAZARD_ORDER } from "@/constants/sprinklerHazard";
 import RoomTypeSelect from "@/components/panels/RoomTypeSelect";
 import EntranceTypeSelect from "@/components/panels/EntranceTypeSelect";
@@ -39,7 +38,7 @@ type StructureInfoPanelProps = {
   onEntranceTypeChange: (id: string, entranceType: EntranceType) => void;
   onEntranceSwingDirectionChange: (
     id: string,
-    entranceSwingDirection: EntranceSwingDirection
+    entranceSwingDirection: EntranceSwingDirection | undefined
   ) => void;
   onSplitPartition: (
     structureId: string,
@@ -272,7 +271,7 @@ export default function StructureInfoPanel({
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-gray-500">열리는 방향</span>
             <EntranceSwingDirectionSelect
-              value={structure.entranceSwingDirection ?? DEFAULT_ENTRANCE_SWING_DIRECTION}
+              value={structure.entranceSwingDirection}
               onChange={(value) => onEntranceSwingDirectionChange(structure.id, value)}
             />
           </label>
